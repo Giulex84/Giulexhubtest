@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Giulex Hub Testnet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Pi SDK -->
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+  <style>
+    body {
+      font-family: monospace;
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 20px;
+    }
+    h1 { margin-bottom: 10px; }
+    button {
+      padding: 10px 16px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      border-radius: 6px;
+      border: none;
+      font-weight: bold;
+    }
+    #auth { background: #6366f1; color: white; }
+    #pay { background: #22c55e; color: black; }
+    pre {
+      background: #020617;
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin-top: 12px;
+      white-space: pre-wrap;
+    }
+    .ok { color: #22c55e; }
+  </style>
+</head>
+
+<body>
+  <h1>Giulex Hub – Testnet</h1>
+  <p class="ok">Pi SDK ready (Testnet)</p>
+
+  <button id="auth">Authenticate</button>
+  <button id="pay">Pay 1 Test-Pi</button>
+
+  <pre id="log">Waiting…</pre>
+
+  <script>
+    const log = (msg) => {
+      document.getElementById("log").textContent += "\n" + msg;
+    };
+
+    // INIT SDK (TESTNET)
+    Pi.init({
+      version: "2.0",
+      sandbox: true
+    });
+
+    log("Pi SDK initialized (sandbox)");
+
+    let currentUser = null;
+
+    // AUTH
+    document.getElementById("auth").onclick = async () => {
+      log("Authenticating...");
+      try {
+        const auth = await Pi.authenticate(
+          ["username", "payments"],
+          (payment) => log("Incomplete payment: " + JSON.stringify(payment))
+        );
+        currentUser = auth;
+        log("User authenticated:");
+        log(JSON.stringify(auth, null, 2));
+      } catch (err) {
+        log("Auth error:");
+        log(JSON.stringify(err, null, 2));
+      }
+    };
+
+    // PAYMENT
+    document.getElementById("pay").onclick = async () => {
+      log("pay() clicked");
+
+      if (!currentUser) {
+        log("ERROR: authenticate first");
+        return;
+      }
+
+      try {
+        const payment = await Pi.createPayment({
+          amount: 1,
+          memo: "Giulex Hub Testnet payment",
+          metadata: { app: "giulex-hub-testnet" }
+        });
+
+        log("Payment created:");
+        log(JSON.stringify(payment, null, 2));
+
+      } catch (err) {
+        log("Payment error:");
+        log(JSON.stringify(err, null, 2));
+      }
+    };
+  </script>
+</body>
+</html>
