@@ -1,71 +1,447 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Giulex Hub – Testnet</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-<body>
-  <h1>Giulex Hub – Testnet</h1>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Giulex Hub – Testnet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <button onclick="auth()">Authenticate</button>
-  <button onclick="pay()">Pay 1 Test-Pi</button>
+    <!-- Pi Network JS SDK (obbligatorio) -->
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <script>
+      // Inizializzazione SDK: deve avvenire UNA sola volta
+      // NOTA: niente sandbox qui, perché non stai usando il Sandbox locale,
+      // ma l'app reale (Testnet) via PiNet.
+      const Pi = window.Pi;
 
-  <pre id="log">Waiting…</pre>
+      Pi.init({ version: "2.0" });
+    </script>
 
-  <!-- Pi SDK -->
-  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        margin: 0;
+        background: #050816;
+        color: #f4f4f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
 
-  <script>
-    const log = (m) => {
-      document.getElementById("log").textContent +=
-        "\n" + (typeof m === "string" ? m : JSON.stringify(m, null, 2));
-    };
+      .app {
+        background: #090b1f;
+        border-radius: 16px;
+        padding: 24px 20px;
+        max-width: 420px;
+        width: 100%;
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(148, 163, 184, 0.3);
+      }
 
-    // INIT SDK — TESTNET
-    Pi.init({
-      version: "2.0",
-      sandbox: true
-    });
+      h1 {
+        font-size: 1.4rem;
+        margin: 0 0 4px;
+      }
 
-    let authed = false;
+      .subtitle {
+        font-size: 0.85rem;
+        color: #9ca3af;
+        margin-bottom: 16px;
+      }
 
-    async function auth() {
-      log("Authenticating…");
-      try {
-        const res = await Pi.authenticate(
-          ["username", "payments"],
-          (payment) => log("Incomplete payment: " + JSON.stringify(payment))
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        background: rgba(56, 189, 248, 0.08);
+        color: #7dd3fc;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        margin-bottom: 14px;
+      }
+
+      .badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #22c55e;
+      }
+
+      .section {
+        padding: 10px 0 12px;
+        border-top: 1px solid rgba(31, 41, 55, 0.9);
+      }
+
+      .section:first-of-type {
+        border-top: none;
+        padding-top: 0;
+      }
+
+      .section-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      .section-desc {
+        font-size: 0.8rem;
+        color: #9ca3af;
+        margin-bottom: 10px;
+      }
+
+      button {
+        width: 100%;
+        border-radius: 999px;
+        border: none;
+        padding: 10px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: transform 0.08s ease, box-shadow 0.08s ease,
+          opacity 0.1s ease;
+      }
+
+      button.primary {
+        background: #f97316;
+        color: #111827;
+        box-shadow: 0 10px 20px rgba(248, 113, 113, 0.3);
+      }
+
+      button.secondary {
+        background: transparent;
+        color: #e5e7eb;
+        border: 1px solid rgba(148, 163, 184, 0.6);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+        box-shadow: none;
+        transform: none;
+      }
+
+      button:not(:disabled):active {
+        transform: translateY(1px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+      }
+
+      .status {
+        font-size: 0.78rem;
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin-top: 8px;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(30, 64, 175, 0.8);
+        color: #e5e7eb;
+        max-height: 120px;
+        overflow: auto;
+        white-space: pre-line;
+      }
+
+      .status.ok {
+        border-color: #22c55e;
+      }
+
+      .status.error {
+        border-color: #ef4444;
+      }
+
+      .hint {
+        font-size: 0.72rem;
+        color: #9ca3af;
+        margin-top: 6px;
+      }
+
+      .hint-strong {
+        color: #f97316;
+        font-weight: 600;
+      }
+
+      .pill {
+        font-size: 0.72rem;
+        color: #a5b4fc;
+        margin-top: 6px;
+      }
+
+      .pill code {
+        font-size: 0.72rem;
+        background: rgba(15, 23, 42, 0.9);
+        padding: 1px 4px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="app">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        <span>Giulex Hub – Testnet</span>
+      </div>
+
+      <h1>Pi Testnet dApp Shell</h1>
+      <p class="subtitle">
+        Autenticazione + pagamento di test per completare il punto 10 della
+        checklist Pi.
+      </p>
+
+      <!-- Sezione AUTH -->
+      <section class="section">
+        <div class="section-title">1. Autenticazione</div>
+        <div class="section-desc">
+          Apri l’app dal <strong>Pi Browser</strong> usando
+          <strong>hubtestXXXX.pi-apps.net</strong>, poi clicca il bottone:
+        </div>
+
+        <button id="btn-auth" class="primary">
+          🔐 Authenticate con Pi
+        </button>
+
+        <div id="auth-status" class="status">
+          Stato: in attesa di azione utente…
+        </div>
+
+        <p class="hint">
+          L’auth funziona solo se:
+          <span class="hint-strong">Pi Browser</span>,
+          <span class="hint-strong">URL pi-apps.net</span>,
+          <span class="hint-strong">Pi.init chiamato una sola volta</span>.
+        </p>
+      </section>
+
+      <!-- Sezione PAYMENT -->
+      <section class="section">
+        <div class="section-title">2. Pagamento Test-Pi</div>
+        <div class="section-desc">
+          Dopo l’autenticazione abiliti il pagamento di
+          <strong>1 Test-Pi</strong> con memo
+          <code>Test payment</code>.
+        </div>
+
+        <button id="btn-pay" class="secondary" disabled>
+          💳 Paga 1 Test-Pi (Test)
+        </button>
+
+        <div id="pay-status" class="status">
+          Stato pagamento: in attesa di autenticazione…
+        </div>
+
+        <p class="pill">
+          Payment data minimo:
+          <code>{ amount: 1, memo: "Test payment" }</code>
+        </p>
+      </section>
+    </main>
+
+    <script>
+      // -----------------------
+      // Stato interno minimale
+      // -----------------------
+      let authResult = null; // conterrà accessToken + user dopo Pi.authenticate
+      let isAuthenticating = false;
+      let isPaying = false;
+
+      const btnAuth = document.getElementById("btn-auth");
+      const btnPay = document.getElementById("btn-pay");
+      const authStatusEl = document.getElementById("auth-status");
+      const payStatusEl = document.getElementById("pay-status");
+
+      function setAuthStatus(text, type) {
+        authStatusEl.textContent = text;
+        authStatusEl.classList.remove("ok", "error");
+        if (type === "ok") authStatusEl.classList.add("ok");
+        if (type === "error") authStatusEl.classList.add("error");
+      }
+
+      function setPayStatus(text, type) {
+        payStatusEl.textContent = text;
+        payStatusEl.classList.remove("ok", "error");
+        if (type === "ok") payStatusEl.classList.add("ok");
+        if (type === "error") payStatusEl.classList.add("error");
+      }
+
+      // -----------------------
+      // 1) AUTENTICAZIONE
+      // -----------------------
+      btnAuth.addEventListener("click", function () {
+        if (!Pi) {
+          setAuthStatus(
+            "Errore: Pi SDK non disponibile. Apri da Pi Browser e assicurati che l’URL sia *.pi-apps.net.",
+            "error"
+          );
+          return;
+        }
+
+        if (isAuthenticating) return;
+        isAuthenticating = true;
+        btnAuth.disabled = true;
+        setAuthStatus("Avvio autenticazione… attendi il popup di Pi.", null);
+
+        // Scope minimi per pagamento: 'payments'
+        const scopes = ["payments"];
+
+        // Callback per pagamenti incompleti
+        function onIncompletePaymentFound(payment) {
+          console.log("[Pi] Incomplete payment trovato:", payment);
+          setPayStatus(
+            "Pagamento incompleto trovato (Testnet). Vedi console per dettagli.",
+            "error"
+          );
+          // Qui in futuro potresti richiamare il tuo backend per completare/cancellare
+        }
+
+        Pi.authenticate(scopes, onIncompletePaymentFound)
+          .then(function (auth) {
+            authResult = auth;
+            console.log("[Pi] Auth OK:", auth);
+            setAuthStatus(
+              "Autenticazione completata ✅\nUser: " + auth.user.username,
+              "ok"
+            );
+            btnPay.disabled = false;
+            setPayStatus(
+              "Pronto per il pagamento di test. Clicca sul bottone qui sopra.",
+              "ok"
+            );
+          })
+          .catch(function (error) {
+            console.error("[Pi] Auth error:", error);
+            setAuthStatus(
+              "Errore durante l’autenticazione: " + (error && error.message
+                ? error.message
+                : JSON.stringify(error)),
+              "error"
+            );
+          })
+          .finally(function () {
+            isAuthenticating = false;
+            btnAuth.disabled = false;
+          });
+      });
+
+      // -----------------------
+      // 2) PAGAMENTO TESTNET
+      // -----------------------
+      btnPay.addEventListener("click", function () {
+        if (!authResult) {
+          setPayStatus(
+            "Devi prima completare l’autenticazione con Pi.",
+            "error"
+          );
+          return;
+        }
+        if (!Pi) {
+          setPayStatus(
+            "Errore: Pi SDK non disponibile. Apri da Pi Browser e assicurati che l’URL sia *.pi-apps.net.",
+            "error"
+          );
+          return;
+        }
+        if (isPaying) return;
+        isPaying = true;
+        btnPay.disabled = true;
+
+        // Payment minimo richiesto
+        const paymentData = {
+          amount: 1, // 1 Test-Pi
+          memo: "Test payment",
+          metadata: {
+            source: "GiulexHub-Testnet",
+            ts: Date.now(),
+          },
+        };
+
+        setPayStatus(
+          "Creazione pagamento di 1 Test-Pi… attendi il popup del wallet.",
+          null
         );
-        authed = true;
-        log("AUTH OK");
-        log(res);
-      } catch (e) {
-        log("AUTH ERROR");
-        log(e);
-      }
-    }
 
-    async function pay() {
-      log("pay() clicked");
-      if (!authed) {
-        log("ERROR: authenticate first");
-        return;
-      }
+        // Callbacks: qui in produzione devi parlare con il tuo backend
+        const paymentCallbacks = {
+          // 1) Il frontend è pronto a chiedere l'approvazione al server
+          onReadyForServerApproval: function (paymentId) {
+            console.log("[Pi] onReadyForServerApproval:", paymentId);
+            setPayStatus(
+              "In attesa di approvazione server… (mock). paymentId: " +
+                paymentId,
+              null
+            );
 
-      try {
-        const payment = await Pi.createPayment({
-          amount: 1,
-          memo: "Giulex Hub Testnet",
-          metadata: { test: true }
-        });
-        log("Payment created");
-        log(payment);
-      } catch (e) {
-        log("PAY ERROR");
-        log(e);
-      }
-    }
-  </script>
-</body>
+            // FUTURO BACKEND:
+            // qui dovresti chiamare il tuo endpoint backend, es:
+            // fetch('/api/pi/approve', { method: 'POST', body: JSON.stringify({ paymentId }) })
+            //   .then(...)
+            //
+            // Per ora facciamo SOLO log di mock.
+          },
+
+          // 2) Dopo che il server ha approvato e il wallet ha eseguito la tx
+          onReadyForServerCompletion: function (paymentId, txid) {
+            console.log("[Pi] onReadyForServerCompletion:", paymentId, txid);
+            setPayStatus(
+              "Pagamento completato (callback client). paymentId: " +
+                paymentId +
+                "\ntxid: " +
+                txid,
+              "ok"
+            );
+
+            // FUTURO BACKEND:
+            // chiama il tuo endpoint per completare:
+            // fetch('/api/pi/complete', { method: 'POST', body: JSON.stringify({ paymentId, txid }) })
+          },
+
+          // 3) L’utente ha cancellato dal wallet / popup
+          onCancel: function (paymentId) {
+            console.log("[Pi] Payment cancellato:", paymentId);
+            setPayStatus(
+              "Pagamento cancellato dall’utente. paymentId: " + paymentId,
+              "error"
+            );
+            isPaying = false;
+            btnPay.disabled = false;
+          },
+
+          // 4) Errore generico
+          onError: function (error, payment) {
+            console.error("[Pi] Payment error:", error, payment);
+            setPayStatus(
+              "Errore nel pagamento: " +
+                (error && error.message
+                  ? error.message
+                  : JSON.stringify(error)),
+              "error"
+            );
+            isPaying = false;
+            btnPay.disabled = false;
+          },
+        };
+
+        Pi.createPayment(paymentData, paymentCallbacks)
+          .then(function (payment) {
+            console.log("[Pi] createPayment result:", payment);
+            // Il resto del flusso passa attraverso i callback sopra.
+          })
+          .catch(function (error) {
+            console.error("[Pi] createPayment error:", error);
+            setPayStatus(
+              "Errore durante la creazione del pagamento: " +
+                (error && error.message
+                  ? error.message
+                  : JSON.stringify(error)),
+              "error"
+            );
+            isPaying = false;
+            btnPay.disabled = false;
+          });
+      });
+    </script>
+  </body>
 </html>
