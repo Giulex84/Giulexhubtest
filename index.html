@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Giulex Hub Testnet</title>
+  <title>Giulex Hub – Testnet</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Pi SDK -->
@@ -10,78 +10,68 @@
 
   <style>
     body {
+      background: #0b1220;
+      color: #fff;
       font-family: monospace;
-      background: #0f172a;
-      color: #e5e7eb;
       padding: 20px;
     }
-    h1 { margin-bottom: 10px; }
     button {
-      padding: 10px 16px;
-      margin-right: 10px;
-      margin-bottom: 10px;
+      padding: 12px 20px;
+      margin: 10px 5px 10px 0;
+      font-size: 16px;
       cursor: pointer;
-      border-radius: 6px;
-      border: none;
-      font-weight: bold;
     }
-    #auth { background: #6366f1; color: white; }
-    #pay { background: #22c55e; color: black; }
-    pre {
+    #log {
       background: #020617;
-      padding: 12px;
-      border-radius: 6px;
-      overflow-x: auto;
-      margin-top: 12px;
+      padding: 15px;
+      margin-top: 20px;
       white-space: pre-wrap;
     }
-    .ok { color: #22c55e; }
   </style>
 </head>
 
 <body>
   <h1>Giulex Hub – Testnet</h1>
-  <p class="ok">Pi SDK ready (Testnet)</p>
+  <p style="color:#22c55e">Pi SDK ready (Testnet)</p>
 
-  <button id="auth">Authenticate</button>
-  <button id="pay">Pay 1 Test-Pi</button>
+  <button onclick="authenticate()">Authenticate</button>
+  <button onclick="pay()">Pay 1 Test-Pi</button>
 
-  <pre id="log">Waiting…</pre>
+  <div id="log">Waiting…</div>
 
   <script>
     const log = (msg) => {
       document.getElementById("log").textContent += "\n" + msg;
     };
 
-    // INIT SDK (TESTNET)
+    // 🔴 FONDAMENTALE: init SDK
     Pi.init({
       version: "2.0",
       sandbox: true
     });
 
-    log("Pi SDK initialized (sandbox)");
-
     let currentUser = null;
 
-    // AUTH
-    document.getElementById("auth").onclick = async () => {
-      log("Authenticating...");
+    async function authenticate() {
+      log("Authenticating…");
+
       try {
         const auth = await Pi.authenticate(
           ["username", "payments"],
-          (payment) => log("Incomplete payment: " + JSON.stringify(payment))
+          (payment) => {
+            log("Incomplete payment found: " + JSON.stringify(payment));
+          }
         );
+
         currentUser = auth;
-        log("User authenticated:");
+        log("AUTH OK");
         log(JSON.stringify(auth, null, 2));
       } catch (err) {
-        log("Auth error:");
-        log(JSON.stringify(err, null, 2));
+        log("AUTH ERROR: " + JSON.stringify(err));
       }
-    };
+    }
 
-    // PAYMENT
-    document.getElementById("pay").onclick = async () => {
+    async function pay() {
       log("pay() clicked");
 
       if (!currentUser) {
@@ -92,18 +82,16 @@
       try {
         const payment = await Pi.createPayment({
           amount: 1,
-          memo: "Giulex Hub Testnet payment",
-          metadata: { app: "giulex-hub-testnet" }
+          memo: "Test payment Giulex Hub",
+          metadata: { test: true }
         });
 
-        log("Payment created:");
+        log("Payment created");
         log(JSON.stringify(payment, null, 2));
-
       } catch (err) {
-        log("Payment error:");
-        log(JSON.stringify(err, null, 2));
+        log("PAYMENT ERROR: " + JSON.stringify(err));
       }
-    };
+    }
   </script>
 </body>
 </html>
