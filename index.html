@@ -100,6 +100,25 @@
         try {
           const auth = await Pi.authenticate(scopes, onIncompletePayment);
           piUser = auth.user;
+const auth = await Pi.authenticate(scopes, onIncompletePayment);
+piUser = auth.user;
+
+// 🔁 A2U automatico (serve SOLO per Testnet requirement)
+try {
+  await fetch("/api/a2u", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      uid: piUser.uid,
+      amount: 0.01
+    })
+  });
+} catch (e) {
+  console.error("A2U error (ignored):", e);
+}
+
+statusEl.textContent =
+  "Auth completata ✅\nUser: " + piUser.username;
 
           statusEl.textContent =
             "Auth completata ✅\nUser: " + piUser.username;
