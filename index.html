@@ -3,68 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <title>Giulex Hub Test</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Pi SDK -->
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
   <style>
     body {
-      font-family: system-ui, sans-serif;
-      padding: 20px;
-      background: #f7f7f7;
+      font-family: Arial, sans-serif;
+      background: #0b1220;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .card {
+      background: #111a2e;
+      padding: 24px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
     }
     button {
-      padding: 10px 16px;
+      background: #ff8c00;
+      border: none;
+      padding: 14px;
+      width: 100%;
+      border-radius: 999px;
       font-size: 16px;
       cursor: pointer;
     }
-    #status {
-      margin-top: 20px;
-      padding: 12px;
-      background: #fff;
-      border-radius: 6px;
+    .status {
+      margin-top: 16px;
+      font-size: 14px;
     }
-    #legal {
-      margin-top: 30px;
+    .links {
+      margin-top: 16px;
+      font-size: 13px;
       display: none;
     }
-    a {
-      margin-right: 15px;
+    .links a {
+      color: #8ab4f8;
+      text-decoration: none;
+      margin: 0 6px;
     }
   </style>
 </head>
-
 <body>
 
-  <h1>Giulex Hub Test</h1>
+  <div class="card">
+    <h2>Giulex Hub</h2>
+    <p>Pi Network Authentication</p>
 
-  <button id="loginBtn">Login with Pi</button>
+    <button id="loginBtn">Login with Pi</button>
 
-  <div id="status">Status: not authenticated</div>
+    <div id="status" class="status"></div>
 
-  <div id="legal">
-    <a href="/privacy.html" target="_blank">Privacy Policy</a>
-    <a href="/terms.html" target="_blank">Terms of Service</a>
+    <div id="legal" class="links">
+      <a href="/privacy.html" target="_blank">Privacy Policy</a> |
+      <a href="/terms.html" target="_blank">Terms of Service</a>
+    </div>
   </div>
 
   <script>
-    // Inizializzazione Pi SDK
-    Pi.init({
-      version: "2.0",
-      sandbox: true
-    });
+    Pi.init({ version: "2.0", sandbox: true });
 
     const scopes = ["username"];
 
-    // Callback obbligatoria (anche se non usata)
     function onIncompletePayment(payment) {
-      console.log("Incomplete payment:", payment);
+      console.log("Incomplete payment", payment);
     }
 
     document.getElementById("loginBtn").onclick = async () => {
       const statusEl = document.getElementById("status");
-      statusEl.innerText = "Status: authenticating...";
+      statusEl.innerText = "⏳ Waiting for Pi authentication...";
 
       try {
         const auth = await Pi.authenticate(
@@ -74,17 +88,11 @@
 
         console.log("AUTH SUCCESS", auth);
 
-        // UID e username
-        const username = auth.user.username;
-        const uid = auth.user.uid;
-
         statusEl.innerHTML = `
-          ✅ Auth completed<br/>
-          User: <b>${username}</b><br/>
-          UID: <code>${uid}</code>
+          ✅ Auth completed<br />
+          User: <b>${auth.user.username}</b>
         `;
 
-        // Mostra legal links solo dopo auth
         document.getElementById("legal").style.display = "block";
 
       } catch (err) {
