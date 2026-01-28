@@ -1,106 +1,169 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Giulex Hub Test</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Giulex Hub – Pi Payments Testnet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Pi SDK -->
-  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <!-- Pi SDK -->
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <script>
+      Pi.init({ version: "2.0" });
+    </script>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0b1220;
-      color: #fff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .card {
-      background: #111a2e;
-      padding: 24px;
-      border-radius: 12px;
-      width: 100%;
-      max-width: 360px;
-      text-align: center;
-    }
-    button {
-      background: #ff8c00;
-      border: none;
-      padding: 14px;
-      width: 100%;
-      border-radius: 999px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .status {
-      margin-top: 16px;
-      font-size: 14px;
-    }
-    .links {
-      margin-top: 16px;
-      font-size: 13px;
-      display: none;
-    }
-    .links a {
-      color: #8ab4f8;
-      text-decoration: none;
-      margin: 0 6px;
-    }
-  </style>
-</head>
-<body>
-
-  <div class="card">
-    <h2>Giulex Hub</h2>
-    <p>Pi Network Authentication</p>
-
-    <button id="loginBtn">Login with Pi</button>
-
-    <div id="status" class="status"></div>
-
-    <div id="legal" class="links">
-      <a href="/privacy.html" target="_blank">Privacy Policy</a> |
-      <a href="/terms.html" target="_blank">Terms of Service</a>
-    </div>
-  </div>
-
-  <script>
-    Pi.init({ version: "2.0", sandbox: true });
-
-    const scopes = ["username"];
-
-    function onIncompletePayment(payment) {
-      console.log("Incomplete payment", payment);
-    }
-
-    document.getElementById("loginBtn").onclick = async () => {
-      const statusEl = document.getElementById("status");
-      statusEl.innerText = "⏳ Waiting for Pi authentication...";
-
-      try {
-        const auth = await Pi.authenticate(
-          scopes,
-          onIncompletePayment
-        );
-
-        console.log("AUTH SUCCESS", auth);
-
-        statusEl.innerHTML = `
-          ✅ Auth completed<br />
-          User: <b>${auth.user.username}</b>
-        `;
-
-        document.getElementById("legal").style.display = "block";
-
-      } catch (err) {
-        console.error("AUTH ERROR", err);
-        statusEl.innerText = "❌ Authentication failed";
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0b1020;
+        color: #e5e7eb;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont;
       }
-    };
-  </script>
+      .app {
+        max-width: 420px;
+        width: 100%;
+        background: #0f172a;
+        border-radius: 16px;
+        padding: 24px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        text-align: center;
+      }
+      button {
+        width: 100%;
+        border-radius: 999px;
+        border: none;
+        padding: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        background: #f97316;
+        color: #111827;
+        margin-bottom: 12px;
+      }
+      button.secondary {
+        background: transparent;
+        color: #e5e7eb;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .status {
+        padding: 10px;
+        font-size: 0.8rem;
+        border-radius: 8px;
+        background: #020617;
+        white-space: pre-line;
+      }
+      .ok {
+        border: 1px solid #22c55e;
+      }
+      .error {
+        border: 1px solid #ef4444;
+      }
+    </style>
+  </head>
 
-</body>
+  <body>
+    <main class="app">
+      <h2>Giulex Hub</h2>
+      <p>Pi Payments – Testnet</p>
+
+      <button id="login">Login with Pi</button>
+      <button id="pay" class="secondary" style="display:none;">
+        Paga 1 Test-Pi
+      </button>
+
+      <div id="status" class="status">Stato: inattivo</div>
+    </main>
+
+    <script>
+      const loginBtn = document.getElementById("login");
+      const payBtn = document.getElementById("pay");
+      const statusEl = document.getElementById("status");
+
+      let piUser = null;
+
+      const scopes = ["username", "payments"];
+
+      function onIncompletePayment(payment) {
+        console.log("Incomplete payment found", payment);
+      }
+
+      loginBtn.onclick = async () => {
+        loginBtn.disabled = true;
+        statusEl.textContent = "Autenticazione Pi in corso…";
+
+        try {
+          const auth = await Pi.authenticate(scopes, onIncompletePayment);
+          piUser = auth.user;
+
+          statusEl.textContent =
+            "Auth completata ✅\nUser: " + piUser.username;
+          statusEl.classList.add("ok");
+
+          loginBtn.style.display = "none";
+          payBtn.style.display = "block";
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = "Errore autenticazione";
+          statusEl.classList.add("error");
+          loginBtn.disabled = false;
+        }
+      };
+
+      payBtn.onclick = async () => {
+        statusEl.textContent = "Avvio pagamento…";
+
+        Pi.createPayment(
+          {
+            amount: 1,
+            memo: "Giulex Hub Test Payment",
+            metadata: { app: "GiulexHub" },
+          },
+          {
+            onReadyForServerApproval: async (paymentId) => {
+              await fetch("/api/pi-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  action: "approve",
+                  paymentId,
+                }),
+              });
+            },
+
+            onReadyForServerCompletion: async (paymentId, txid) => {
+              await fetch("/api/pi-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  action: "complete",
+                  paymentId,
+                  txid,
+                }),
+              });
+
+              statusEl.textContent = "Pagamento completato ✅";
+              statusEl.classList.add("ok");
+            },
+
+            onCancel: () => {
+              statusEl.textContent = "Pagamento annullato";
+              statusEl.classList.add("error");
+            },
+
+            onError: (err) => {
+              console.error(err);
+              statusEl.textContent = "Errore pagamento";
+              statusEl.classList.add("error");
+            },
+          }
+        );
+      };
+    </script>
+  </body>
 </html>
