@@ -1,129 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Giulex Hub</title>
+<head>
+  <meta charset="UTF-8" />
+  <title>Giulex Hub Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- Pi SDK -->
-    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-    <script>
-      // Pi SDK init (OBBLIGATORIO, una sola volta)
-      Pi.init({ version: "2.0" });
-      console.log("Pi SDK initialized");
-    </script>
+  <!-- Pi SDK -->
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
-    <style>
-      body {
-        background: #0b0f1a;
-        color: #ffffff;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        margin: 0;
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 20px;
+      background: #f7f7f7;
+    }
+    button {
+      padding: 10px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 20px;
+      padding: 12px;
+      background: #fff;
+      border-radius: 6px;
+    }
+    #legal {
+      margin-top: 30px;
+      display: none;
+    }
+    a {
+      margin-right: 15px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Giulex Hub Test</h1>
+
+  <button id="loginBtn">Login with Pi</button>
+
+  <div id="status">Status: not authenticated</div>
+
+  <div id="legal">
+    <a href="/privacy.html" target="_blank">Privacy Policy</a>
+    <a href="/terms.html" target="_blank">Terms of Service</a>
+  </div>
+
+  <script>
+    // Inizializzazione Pi SDK
+    Pi.init({
+      version: "2.0",
+      sandbox: true
+    });
+
+    const scopes = ["username"];
+
+    // Callback obbligatoria (anche se non usata)
+    function onIncompletePayment(payment) {
+      console.log("Incomplete payment:", payment);
+    }
+
+    document.getElementById("loginBtn").onclick = async () => {
+      const statusEl = document.getElementById("status");
+      statusEl.innerText = "Status: authenticating...";
+
+      try {
+        const auth = await Pi.authenticate(
+          scopes,
+          onIncompletePayment
+        );
+
+        console.log("AUTH SUCCESS", auth);
+
+        // UID e username
+        const username = auth.user.username;
+        const uid = auth.user.uid;
+
+        statusEl.innerHTML = `
+          ✅ Auth completed<br/>
+          User: <b>${username}</b><br/>
+          UID: <code>${uid}</code>
+        `;
+
+        // Mostra legal links solo dopo auth
+        document.getElementById("legal").style.display = "block";
+
+      } catch (err) {
+        console.error("AUTH ERROR", err);
+        statusEl.innerText = "❌ Authentication failed";
       }
+    };
+  </script>
 
-      .card {
-        background: #11172a;
-        padding: 28px;
-        border-radius: 18px;
-        width: 340px;
-        text-align: center;
-        box-shadow: 0 0 40px rgba(0, 0, 0, 0.55);
-      }
-
-      h1 {
-        margin: 0 0 8px 0;
-        font-size: 22px;
-      }
-
-      p {
-        margin: 0 0 16px 0;
-        font-size: 14px;
-        opacity: 0.85;
-      }
-
-      button {
-        width: 100%;
-        padding: 12px;
-        border-radius: 999px;
-        border: none;
-        background: #ff8c1a;
-        color: #000;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-
-      .status {
-        margin-top: 16px;
-        font-size: 14px;
-      }
-
-      .links {
-        margin-top: 16px;
-        font-size: 13px;
-      }
-
-      .links a {
-        color: #9bb7ff;
-        text-decoration: none;
-        margin: 0 6px;
-      }
-
-      .links a:hover {
-        text-decoration: underline;
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="card">
-      <h1>Giulex Hub</h1>
-      <p>Pi Network Authentication</p>
-
-      <button id="loginBtn">Login with Pi</button>
-
-      <div class="status" id="status">Status: idle</div>
-
-      <div class="links" id="legal" style="display: none;">
-        <a href="/privacy.html" target="_blank">Privacy Policy</a> |
-        <a href="/terms.html" target="_blank">Terms of Service</a>
-      </div>
-    </div>
-
-    <script>
-      const scopes = ["username"];
-
-      // Callback obbligatoria (anche se vuota)
-      function onIncompletePayment(payment) {
-        console.log("Incomplete payment", payment);
-      }
-
-      document.getElementById("loginBtn").onclick = async () => {
-        const statusEl = document.getElementById("status");
-        statusEl.innerText = "Status: waiting for user action…";
-
-        try {
-          const auth = await Pi.authenticate(
-            scopes,
-            onIncompletePayment
-          );
-
-          console.log("AUTH SUCCESS", auth);
-
-          statusEl.innerHTML = `
-            ✅ Auth completed<br />
-            User: <b>${auth.user.username}</b>
-          `;
-
-          document.getElementById("legal").style.display = "block";
-        } catch (err) {
-          console.error("AUTH ERROR", err);
-          statusEl.innerText = "❌ Authentication failed";
-        }
-      };
-    </script>
-  </body>
+</body>
 </html>
