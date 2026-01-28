@@ -97,24 +97,23 @@
         loginBtn.disabled = true;
         statusEl.textContent = "Autenticazione Pi in corso…";
 
-        try {try 
+        
+try {
   const auth = await Pi.authenticate(scopes, onIncompletePayment);
   piUser = auth.user;
 
-  // LOG (opzionale)
-  console.log("PI UID:", auth.user.uid);
-
-  // 👇 MOSTRA UID A SCHERMO (TEMPORANEO)
-  statusEl.textContent =
-    "Auth completata ✅\nUser: " +
-    piUser.username +
-    "\nUID: " +
-    auth.user.uid;
-
+  // UI MINIMA E SICURA
+  statusEl.textContent = "Auth completata ✅";
   statusEl.classList.add("ok");
 
   loginBtn.style.display = "none";
   payBtn.style.display = "block";
+
+  // ⏱️ MOSTRA UID FUORI DAL TICK DELL’AUTH (PI-SAFE)
+  setTimeout(() => {
+    statusEl.textContent += "\nUID: " + piUser.uid;
+  }, 0);
+
 } catch (err) {
   console.error(err);
   statusEl.textContent = "Errore autenticazione";
@@ -127,7 +126,6 @@
           statusEl.textContent = "Errore autenticazione";
           statusEl.classList.add("error");
           loginBtn.disabled = false;
-        }
       };
 
       payBtn.onclick = async () => {
