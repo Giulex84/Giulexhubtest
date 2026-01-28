@@ -11,6 +11,9 @@
  */
 
 export default async function handler(req, res) {
+  // 🔍 LOG CHIAVE — NON TOCCARE ALTRO
+  console.log("PI PAYMENT RAW BODY:", JSON.stringify(req.body));
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
