@@ -1,187 +1,128 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Giulex Hub – Pi Payments Testnet</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Giulex Hub</title>
 
     <!-- Pi SDK -->
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
     <script>
+      // Pi SDK init (OBBLIGATORIO, una sola volta)
       Pi.init({ version: "2.0" });
+      console.log("Pi SDK initialized");
     </script>
 
     <style>
       body {
-        margin: 0;
-        min-height: 100vh;
+        background: #0b0f1a;
+        color: #ffffff;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #0b1020;
-        color: #e5e7eb;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont;
+        height: 100vh;
+        margin: 0;
       }
-      .app {
-        max-width: 420px;
-        width: 100%;
-        background: #0f172a;
-        border-radius: 16px;
-        padding: 24px;
-        border: 1px solid rgba(148, 163, 184, 0.2);
+
+      .card {
+        background: #11172a;
+        padding: 28px;
+        border-radius: 18px;
+        width: 340px;
         text-align: center;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.55);
       }
+
+      h1 {
+        margin: 0 0 8px 0;
+        font-size: 22px;
+      }
+
+      p {
+        margin: 0 0 16px 0;
+        font-size: 14px;
+        opacity: 0.85;
+      }
+
       button {
         width: 100%;
+        padding: 12px;
         border-radius: 999px;
         border: none;
-        padding: 12px;
+        background: #ff8c1a;
+        color: #000;
+        font-size: 16px;
         font-weight: 600;
         cursor: pointer;
-        background: #f97316;
-        color: #111827;
-        margin-bottom: 12px;
       }
-      button.secondary {
-        background: transparent;
-        color: #e5e7eb;
-        border: 1px solid rgba(148, 163, 184, 0.5);
-      }
-      button:disabled {
-        opacity: 0.5;
-        cursor: default;
-      }
+
       .status {
-        padding: 10px;
-        font-size: 0.8rem;
-        border-radius: 8px;
-        background: #020617;
-        white-space: pre-line;
+        margin-top: 16px;
+        font-size: 14px;
       }
-      .ok {
-        border: 1px solid #22c55e;
+
+      .links {
+        margin-top: 16px;
+        font-size: 13px;
       }
-      .error {
-        border: 1px solid #ef4444;
+
+      .links a {
+        color: #9bb7ff;
+        text-decoration: none;
+        margin: 0 6px;
+      }
+
+      .links a:hover {
+        text-decoration: underline;
       }
     </style>
   </head>
 
   <body>
-    <main class="app">
-      <h2>Giulex Hub</h2>
-      <p>Pi Payments – Testnet</p>
+    <div class="card">
+      <h1>Giulex Hub</h1>
+      <p>Pi Network Authentication</p>
 
-      <button id="login">Login with Pi</button>
-      <button id="pay" class="secondary" style="display:none;">
-        Paga 1 Test-Pi
-      </button>
+      <button id="loginBtn">Login with Pi</button>
 
-      <div id="status" class="status">Stato: inattivo</div>
-    </main>
+      <div class="status" id="status">Status: idle</div>
+
+      <div class="links" id="legal" style="display: none;">
+        <a href="/privacy.html" target="_blank">Privacy Policy</a> |
+        <a href="/terms.html" target="_blank">Terms of Service</a>
+      </div>
+    </div>
 
     <script>
-      const loginBtn = document.getElementById("login");
-      const payBtn = document.getElementById("pay");
-      const statusEl = document.getElementById("status");
+      const scopes = ["username"];
 
-      let piUser = null;
-
-      const scopes = ["username", "payments"];
-
+      // Callback obbligatoria (anche se vuota)
       function onIncompletePayment(payment) {
-        console.log("Incomplete payment found", payment);
+        console.log("Incomplete payment", payment);
       }
 
-      loginBtn.onclick = async () => {
-        loginBtn.disabled = true;
-        statusEl.textContent = "Autenticazione Pi in corso…";
+      document.getElementById("loginBtn").onclick = async () => {
+        const statusEl = document.getElementById("status");
+        statusEl.innerText = "Status: waiting for user action…";
 
         try {
-          const auth = await Pi.authenticate(scopes, onIncompletePayment);
-          piUser = auth.user;
-const auth = await Pi.authenticate(scopes, onIncompletePayment);
-piUser = auth.user;
+          const auth = await Pi.authenticate(
+            scopes,
+            onIncompletePayment
+          );
 
-// 🔁 A2U automatico (serve SOLO per Testnet requirement)
-try {
-  await fetch("/api/a2u", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      uid: piUser.uid,
-      amount: 0.01
-    })
-  });
-} catch (e) {
-  console.error("A2U error (ignored):", e);
-}
+          console.log("AUTH SUCCESS", auth);
 
-statusEl.textContent =
-  "Auth completata ✅\nUser: " + piUser.username;
+          statusEl.innerHTML = `
+            ✅ Auth completed<br />
+            User: <b>${auth.user.username}</b>
+          `;
 
-          statusEl.textContent =
-            "Auth completata ✅\nUser: " + piUser.username;
-          statusEl.classList.add("ok");
-
-          loginBtn.style.display = "none";
-          payBtn.style.display = "block";
+          document.getElementById("legal").style.display = "block";
         } catch (err) {
-          console.error(err);
-          statusEl.textContent = "Errore autenticazione";
-          statusEl.classList.add("error");
-          loginBtn.disabled = false;
+          console.error("AUTH ERROR", err);
+          statusEl.innerText = "❌ Authentication failed";
         }
-      };
-
-      payBtn.onclick = async () => {
-        statusEl.textContent = "Avvio pagamento…";
-
-        Pi.createPayment(
-          {
-            amount: 1,
-            memo: "Giulex Hub Test Payment",
-            metadata: { app: "GiulexHub" },
-          },
-          {
-            onReadyForServerApproval: async (paymentId) => {
-              await fetch("/api/pi-payment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  action: "approve",
-                  paymentId,
-                }),
-              });
-            },
-
-            onReadyForServerCompletion: async (paymentId, txid) => {
-              await fetch("/api/pi-payment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  action: "complete",
-                  paymentId,
-                  txid,
-                }),
-              });
-
-              statusEl.textContent = "Pagamento completato ✅";
-              statusEl.classList.add("ok");
-            },
-
-            onCancel: () => {
-              statusEl.textContent = "Pagamento annullato";
-              statusEl.classList.add("error");
-            },
-
-            onError: (err) => {
-              console.error(err);
-              statusEl.textContent = "Errore pagamento";
-              statusEl.classList.add("error");
-            },
-          }
-        );
       };
     </script>
   </body>
