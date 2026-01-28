@@ -97,35 +97,30 @@
         loginBtn.disabled = true;
         statusEl.textContent = "Autenticazione Pi in corso…";
 
-        
-try {
-  const auth = await Pi.authenticate(scopes, onIncompletePayment);
-  piUser = auth.user;
+        try {
+          const auth = await Pi.authenticate(scopes, onIncompletePayment);
+          piUser = auth.user;
 
-  // UI MINIMA E SICURA
-  statusEl.textContent = "Auth completata ✅";
-  statusEl.classList.add("ok");
+          // log sicuro dell'UID
+          console.log("PI UID:", piUser.uid);
 
-  loginBtn.style.display = "none";
-  payBtn.style.display = "block";
+          // UI minimale e sicura
+          statusEl.textContent = "Auth completata ✅";
+          statusEl.classList.add("ok");
 
-  // ⏱️ MOSTRA UID FUORI DAL TICK DELL’AUTH (PI-SAFE)
-  setTimeout(() => {
-    statusEl.textContent += "\nUID: " + piUser.uid;
-  }, 0);
+          loginBtn.style.display = "none";
+          payBtn.style.display = "block";
 
-} catch (err) {
-  console.error(err);
-  statusEl.textContent = "Errore autenticazione";
-  statusEl.classList.add("error");
-  loginBtn.disabled = false;
-}
-
+          // opzionale: mostra UID dopo il tick dell’auth
+          setTimeout(() => {
+            statusEl.textContent += "\nUID: " + piUser.uid;
+          }, 0);
         } catch (err) {
           console.error(err);
           statusEl.textContent = "Errore autenticazione";
           statusEl.classList.add("error");
           loginBtn.disabled = false;
+        }
       };
 
       payBtn.onclick = async () => {
