@@ -100,6 +100,7 @@
         try {
           const auth = await Pi.authenticate(scopes, onIncompletePayment);
           piUser = auth.user;
+          console.log("PI UID:", auth.user.uid);
 
           statusEl.textContent =
             "Auth completata ✅\nUser: " + piUser.username;
