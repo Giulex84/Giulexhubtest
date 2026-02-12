@@ -1,93 +1,90 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <title>Giulex Hub Testnet</title>
-  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-</head>
+<script>
+  const loginBtn = document.getElementById("login");
+  const payBtn = document.getElementById("pay");
+  const statusEl = document.getElementById("status");
 
-<body>
-  <h1>Giulex Hub Testnet</h1>
-  <button id="loginBtn">Login & Init Wallet</button>
+  let piUser = null;
+  const scopes = ["username", "payments"];
 
-  <script>
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      try {
+  function onIncompletePayment(payment) {
+    console.log("Incomplete payment found", payment);
+  }
 
-        if (typeof Pi === "undefined") {
-          alert("Open inside Pi Browser.");
-          return;
-        }
+  loginBtn.onclick = async () => {
+    loginBtn.disabled = true;
+    statusEl.textContent = "Autenticazione Pi in corso…";
 
-        Pi.init({ version: "2.0" });
+    try {
+      const auth = await Pi.authenticate(scopes, onIncompletePayment);
+      piUser = auth.user;
 
-        console.log("Pi initialized");
+      console.log("PI UID:", piUser.uid);
 
-        const auth = await Pi.authenticate(
-          ["username"],
-          onIncompletePaymentFound
-        );
+      statusEl.textContent = "Auth completata ✅";
+      statusEl.classList.add("ok");
 
-        console.log("Auth:", auth);
+      loginBtn.style.display = "none";
+      payBtn.style.display = "block";
 
-        // ===============================
-        // 🔵 U2A CREATE
-        // ===============================
-        const payment = await Pi.createPayment(
-          {
-            amount: 0.1,
-            memo: "Wallet Initialization",
-            metadata: { init: true }
-          },
-          {
-            onReadyForServerApproval: async function(paymentId) {
-              console.log("Ready for approval:", paymentId);
-
-              await fetch("/api/pi-payment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  action: "approve",
-                  paymentId: paymentId
-                })
-              });
-            },
-
-            onReadyForServerCompletion: async function(paymentId, txid) {
-              console.log("Ready for completion:", paymentId, txid);
-
-              await fetch("/api/pi-payment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  action: "complete",
-                  paymentId: paymentId,
-                  txid: txid
-                })
-              });
-
-              alert("U2A completed. Wallet initialized.");
-            },
-
-            onCancel: function(paymentId) {
-              console.log("Payment cancelled", paymentId);
-            },
-
-            onError: function(error, payment) {
-              console.error("Payment error", error);
-            }
-          }
-        );
-
-      } catch (err) {
-        console.error("Error:", err);
-        alert("Operation failed.");
-      }
-    });
-
-    function onIncompletePaymentFound(payment) {
-      console.log("Incomplete payment found:", payment);
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Errore autenticazione";
+      statusEl.classList.add("error");
+      loginBtn.disabled = false;
     }
-  </script>
-</body>
-</html>
+  };
+
+  payBtn.onclick = async () => {
+    statusEl.textContent = "Avvio pagamento U2A…";
+
+    Pi.createPayment(
+      {
+        amount: 1,
+        memo: "Giulex Hub U2A Init",
+        metadata: { app: "GiulexHubInit" },
+      },
+      {
+        onReadyForServerApproval: async (paymentId) => {
+          console.log("Approving:", paymentId);
+
+          await fetch("/api/pi-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "approve",
+              paymentId,
+            }),
+          });
+        },
+
+        onReadyForServerCompletion: async (paymentId, txid) => {
+          console.log("Completing:", paymentId, txid);
+
+          await fetch("/api/pi-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "complete",
+              paymentId,
+              txid,
+            }),
+          });
+
+          statusEl.textContent = "Pagamento U2A completato ✅";
+          statusEl.classList.add("ok");
+        },
+
+        onCancel: () => {
+          statusEl.textContent = "Pagamento annullato";
+          statusEl.classList.add("error");
+        },
+
+        onError: (err) => {
+          console.error(err);
+          statusEl.textContent = "Errore pagamento";
+          statusEl.classList.add("error");
+        },
+      }
+    );
+  };
+</script>
