@@ -7,67 +7,68 @@
 
 <body>
   <h1>Giulex Hub Testnet</h1>
+
   <button id="loginBtn">Login with Pi</button>
 
   <script>
-    window.onload = function () {
+    // 🔥 INIT PI SDK
+    Pi.init({
+      version: "2.0",
+      sandbox: true // TESTNET
+    });
 
-      // ✅ INIT TESTNET
-      Pi.init({
-        version: "2.0",
-        sandbox: true
-      });
+    async function onIncompletePaymentFound(payment) {
+      console.log("Incomplete payment found:", payment);
+    }
 
-      async function onIncompletePaymentFound(payment) {
-        console.log("Incomplete payment found:", payment);
-      }
+    document.getElementById("loginBtn").addEventListener("click", async () => {
 
-      document.getElementById("loginBtn").onclick = async function () {
+      try {
 
-        try {
-
-          // 🔐 U2A LOGIN
-          const auth = await Pi.authenticate(
-            ["username"],
-            onIncompletePaymentFound
-          );
-
-          console.log("Auth success:", auth);
-
-          const uid = auth.user.uid;
-          console.log("User UID:", uid);
-
-          // 🔥 A2U TESTNET CALL
-          const response = await fetch("/api/a2u", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              uid: uid,
-              amount: 1
-            })
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            console.error("A2U ERROR:", data);
-            alert("A2U error. Check console.");
-            return;
-          }
-
-          console.log("A2U SUCCESS:", data);
-          alert("A2U request sent successfully!");
-
-        } catch (err) {
-          console.error("LOGIN ERROR:", err);
-          alert("Login failed. Check console.");
+        // 🔒 Safety check
+        if (typeof Pi === "undefined") {
+          alert("Open this app inside Pi Browser.");
+          return;
         }
 
-      };
+        // 🔐 LOGIN
+        const auth = await Pi.authenticate(
+          ["username"],
+          onIncompletePaymentFound
+        );
 
-    };
+        console.log("Auth success:", auth);
+
+        const uid = auth.user.uid;
+        console.log("User UID:", uid);
+
+        // 🔥 A2U CALL
+        const response = await fetch("/api/a2u", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            uid: uid,
+            amount: 1
+          })
+        });
+
+        const data = await response.json();
+        console.log("A2U response:", data);
+
+        if (response.ok) {
+          alert("A2U request sent successfully!");
+        } else {
+          alert("A2U error. Check console.");
+        }
+
+      } catch (err) {
+        console.error("Login error:", err);
+        alert("Login failed. Check console.");
+      }
+
+    });
   </script>
 
 </body>
