@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   console.log("PI PAYMENT RAW BODY:", JSON.stringify(req.body));
 
   if (req.method !== "POST") {
@@ -21,24 +21,12 @@ export default async function handler(req, res) {
 
   try {
     if (action === "approve") {
-  const r = await fetch(`${BASE_URL}${paymentId}/approve`, {
-    method: "POST",
-    headers: {
-      Authorization: `Key ${PI_API_KEY}`,
-      "Content-Type": "application/json"
-    }
-  });
-
-  const data = await r.json();
-  console.log("APPROVE RESPONSE:", data);
-
-  if (!r.ok) {
-    return res.status(500).json(data);
-  }
-
-  return res.status(200).json(data);
-}
-
+      const r = await fetch(`${BASE_URL}${paymentId}/approve`, {
+        method: "POST",
+        headers: {
+          Authorization: `Key ${PI_API_KEY}`
+        }
+      });
 
       const data = await r.json();
       console.log("APPROVE RESPONSE:", data);
@@ -55,9 +43,9 @@ export default async function handler(req, res) {
         method: "POST",
         headers: {
           Authorization: `Key ${PI_API_KEY}`,
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({ txid }),
+        body: JSON.stringify({ txid })
       });
 
       const data = await r.json();
@@ -76,4 +64,4 @@ export default async function handler(req, res) {
     console.error("SERVER ERROR:", err);
     return res.status(500).json({ error: "Server error" });
   }
-}
+};
