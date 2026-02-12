@@ -1,31 +1,27 @@
-// /api/a2u.js
-
 export default async function handler(req, res) {
+  console.log("A2U RAW BODY:", req.body);
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const PI_API_KEY = process.env.PI_API_KEY;
+  const { uid, amount } = req.body || {};
 
+  if (!uid || typeof uid !== "string") {
+    return res.status(400).json({ error: "Invalid uid" });
+  }
+
+  const amt = Number(amount);
+  if (!amt || amt <= 0) {
+    return res.status(400).json({ error: "Invalid amount" });
+  }
+
+  const PI_API_KEY = process.env.PI_API_KEY;
   if (!PI_API_KEY) {
-    console.error("Missing PI_API_KEY");
     return res.status(500).json({ error: "Missing PI_API_KEY" });
   }
 
-  const { uid, amount } = req.body || {};
-
-  if (!uid) {
-    console.error("UID missing");
-    return res.status(400).json({ error: "UID missing" });
-  }
-
-  if (!amount) {
-    console.error("Amount missing");
-    return res.status(400).json({ error: "Amount missing" });
-  }
-
   try {
-    // 1️⃣ CREATE PAYMENT (Testnet endpoint)
     const createRes = await fetch(
       "https://api.testnet.minepi.com/v2/payments",
       {
@@ -35,13 +31,13 @@ export default async function handler(req, res) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          payment: {
-            amount: Number(amount),
-            memo: "Test A2U payment",
-            metadata: {
-              uid,
-            },
+          uid,
+          amount: amt,
+          memo: "Testnet A2U",
+          metadata: {
+            type: "a2u-test",
             uid,
+            ts: Date.now(),
           },
         }),
       }
@@ -51,19 +47,17 @@ export default async function handler(req, res) {
 
     if (!createRes.ok) {
       console.error("CREATE ERROR:", created);
-      return res.status(400).json(created);
+      return res.status(500).json(created);
     }
 
     const paymentId = created.identifier;
 
-    // 2️⃣ APPROVE
     const approveRes = await fetch(
       `https://api.testnet.minepi.com/v2/payments/${paymentId}/approve`,
       {
         method: "POST",
         headers: {
           Authorization: `Key ${PI_API_KEY}`,
-          "Content-Type": "application/json",
         },
       }
     );
@@ -72,16 +66,18 @@ export default async function handler(req, res) {
 
     if (!approveRes.ok) {
       console.error("APPROVE ERROR:", approved);
-      return res.status(400).json(approved);
+      return res.status(500).json(approved);
     }
 
     return res.status(200).json({
       success: true,
       paymentId,
     });
-
   } catch (err) {
     console.error("SERVER ERROR:", err);
-    return res.status(500).json({ error: "Server error", details: err });
+    return res.status(500).json({
+      error: "Server error",
+      message: err.message,
+    });
   }
 }
