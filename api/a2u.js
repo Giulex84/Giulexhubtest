@@ -1,7 +1,4 @@
-// /api/a2u.js
-
 export default async function handler(req, res) {
-
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -12,21 +9,19 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Missing PI_API_KEY" });
   }
 
-  const { uid, amount } = req.body || {};
+  const { recipient, amount } = req.body || {};
 
-  if (!uid || typeof uid !== "string") {
-    return res.status(400).json({ error: "Invalid uid" });
+  if (!recipient || typeof recipient !== "string") {
+    return res.status(400).json({ error: "Invalid recipient wallet address" });
   }
 
   const amt = Number(amount);
-
   if (!amt || amt <= 0) {
     return res.status(400).json({ error: "Invalid amount" });
   }
 
   try {
-
-    // 1️⃣ CREATE A2U PAYMENT (TESTNET)
+    // 1️⃣ CREATE A2U PAYMENT (Testnet endpoint)
     const createRes = await fetch("https://api.testnet.minepi.com/v2/payments", {
       method: "POST",
       headers: {
@@ -34,21 +29,22 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        uid: uid,
-        amount: amt,
-        memo: "Testnet A2U - unlock App Wallet",
-        metadata: {
-          type: "a2u-testnet",
-          uid: uid,
-          ts: Date.now()
+        payment: {
+          amount: amt,
+          recipient: recipient,
+          memo: "Testnet A2U - Unlock App Wallet",
+          metadata: {
+            type: "a2u-testnet",
+            ts: Date.now()
+          }
         }
       })
     });
 
     const created = await createRes.json();
+    console.log("CREATE RESPONSE:", created);
 
     if (!createRes.ok || !created.identifier) {
-      console.error("CREATE ERROR:", created);
       return res.status(500).json({
         error: "Create failed",
         details: created
@@ -70,9 +66,9 @@ export default async function handler(req, res) {
     );
 
     const approved = await approveRes.json();
+    console.log("APPROVE RESPONSE:", approved);
 
     if (!approveRes.ok) {
-      console.error("APPROVE ERROR:", approved);
       return res.status(500).json({
         error: "Approve failed",
         details: approved
@@ -92,9 +88,9 @@ export default async function handler(req, res) {
     );
 
     const completed = await completeRes.json();
+    console.log("COMPLETE RESPONSE:", completed);
 
     if (!completeRes.ok) {
-      console.error("COMPLETE ERROR:", completed);
       return res.status(500).json({
         error: "Complete failed",
         details: completed
@@ -103,12 +99,11 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      paymentId,
-      completed
+      paymentId
     });
 
   } catch (err) {
     console.error("SERVER ERROR:", err);
-    return res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error", details: err });
   }
 }
