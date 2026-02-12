@@ -1,5 +1,5 @@
 // /api/a2u.js
-// Pi Network A2U – TESTNET
+// Pi Network A2U – TESTNET (v2 CORRETTO)
 
 export default async function handler(req, res) {
   console.log("A2U RAW BODY:", JSON.stringify(req.body));
@@ -20,9 +20,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // ✅ TESTNET endpoint
+    // ✅ USA QUESTO ENDPOINT (anche per testnet)
     const createRes = await fetch(
-      "https://api.testnet.minepi.com/v2/payments",
+      "https://api.minepi.com/v2/payments",
       {
         method: "POST",
         headers: {
@@ -31,6 +31,7 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           payment: {
+            uid: uid,
             amount: Number(amount),
             memo: "A2U Testnet transfer",
             metadata: {
@@ -38,7 +39,6 @@ export default async function handler(req, res) {
               uid: uid,
               ts: Date.now(),
             },
-            uid: uid,
           },
         }),
       }
@@ -56,9 +56,8 @@ export default async function handler(req, res) {
 
     const paymentId = created.identifier;
 
-    // 🔥 APPROVE
     const approveRes = await fetch(
-      `https://api.testnet.minepi.com/v2/payments/${paymentId}/approve`,
+      `https://api.minepi.com/v2/payments/${paymentId}/approve`,
       {
         method: "POST",
         headers: {
