@@ -5,8 +5,8 @@
   <title>Giulex Hub Testnet</title>
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 </head>
-
 <body>
+
   <h1>Giulex Hub Testnet</h1>
   <button id="loginBtn">Login with Pi</button>
 
@@ -15,13 +15,13 @@
 
     const loginBtn = document.getElementById("loginBtn");
 
+    function onIncompletePaymentFound(payment) {
+      console.log("Incomplete payment found:", payment);
+    }
+
     loginBtn.addEventListener("click", async () => {
       try {
-
-        function onIncompletePaymentFound(payment) {
-          console.log("Incomplete payment found:", payment);
-        }
-
+        // ✅ AUTH (PUNTO FERMO)
         const auth = await Pi.authenticate(
           ["username"],
           onIncompletePaymentFound
@@ -32,7 +32,7 @@
         const uid = auth.user.uid;
         console.log("User UID:", uid);
 
-        // 🔥 A2U TESTNET CALL
+        // 🔥 A2U TESTNET CALL (SOLO DOPO AUTH)
         const response = await fetch("/api/a2u", {
           method: "POST",
           headers: {
@@ -47,13 +47,19 @@
         const result = await response.json();
         console.log("A2U response:", result);
 
-        alert("A2U request sent. Check console for details.");
+        if (!response.ok) {
+          alert("A2U error. Check console.");
+          return;
+        }
 
-      } catch (error) {
-        console.error("Auth error:", error);
+        alert("A2U request sent successfully.");
+
+      } catch (err) {
+        console.error("Auth error:", err);
         alert("Authentication failed.");
       }
     });
   </script>
+
 </body>
 </html>
