@@ -1,19 +1,11 @@
+// /api/a2u.js
+// Pi Network A2U – TESTNET
+
 export default async function handler(req, res) {
-  console.log("A2U RAW BODY:", req.body);
+  console.log("A2U RAW BODY:", JSON.stringify(req.body));
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const { uid, amount } = req.body || {};
-
-  if (!uid || typeof uid !== "string") {
-    return res.status(400).json({ error: "Invalid uid" });
-  }
-
-  const amt = Number(amount);
-  if (!amt || amt <= 0) {
-    return res.status(400).json({ error: "Invalid amount" });
   }
 
   const PI_API_KEY = process.env.PI_API_KEY;
@@ -21,7 +13,14 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Missing PI_API_KEY" });
   }
 
+  const { uid, amount } = req.body || {};
+
+  if (!uid || !amount) {
+    return res.status(400).json({ error: "Missing uid or amount" });
+  }
+
   try {
+    // ✅ TESTNET endpoint
     const createRes = await fetch(
       "https://api.testnet.minepi.com/v2/payments",
       {
@@ -31,52 +30,63 @@ export default async function handler(req, res) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          uid,
-          amount: amt,
-          memo: "Testnet A2U",
-          metadata: {
-            type: "a2u-test",
-            uid,
-            ts: Date.now(),
+          payment: {
+            amount: Number(amount),
+            memo: "A2U Testnet transfer",
+            metadata: {
+              type: "a2u-testnet",
+              uid: uid,
+              ts: Date.now(),
+            },
+            uid: uid,
           },
         }),
       }
     );
 
     const created = await createRes.json();
+    console.log("CREATE RESPONSE:", created);
 
     if (!createRes.ok) {
-      console.error("CREATE ERROR:", created);
-      return res.status(500).json(created);
+      return res.status(500).json({
+        error: "Create failed",
+        details: created,
+      });
     }
 
     const paymentId = created.identifier;
 
+    // 🔥 APPROVE
     const approveRes = await fetch(
       `https://api.testnet.minepi.com/v2/payments/${paymentId}/approve`,
       {
         method: "POST",
         headers: {
           Authorization: `Key ${PI_API_KEY}`,
+          "Content-Type": "application/json",
         },
       }
     );
 
     const approved = await approveRes.json();
+    console.log("APPROVE RESPONSE:", approved);
 
     if (!approveRes.ok) {
-      console.error("APPROVE ERROR:", approved);
-      return res.status(500).json(approved);
+      return res.status(500).json({
+        error: "Approve failed",
+        details: approved,
+      });
     }
 
     return res.status(200).json({
       success: true,
       paymentId,
     });
+
   } catch (err) {
-    console.error("SERVER ERROR:", err);
+    console.error("A2U EXCEPTION:", err);
     return res.status(500).json({
-      error: "Server error",
+      error: "Backend exception",
       message: err.message,
     });
   }
