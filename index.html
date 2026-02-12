@@ -6,22 +6,21 @@
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 </head>
 <body>
-
   <h1>Giulex Hub Testnet</h1>
   <button id="loginBtn">Login with Pi</button>
 
   <script>
-    Pi.init({ version: "2.0" });
-
-    const loginBtn = document.getElementById("loginBtn");
+    Pi.init({
+      version: "2.0",
+      sandbox: true
+    });
 
     function onIncompletePaymentFound(payment) {
       console.log("Incomplete payment found:", payment);
     }
 
-    loginBtn.addEventListener("click", async () => {
+    document.getElementById("loginBtn").addEventListener("click", async () => {
       try {
-        // ✅ AUTH (PUNTO FERMO)
         const auth = await Pi.authenticate(
           ["username"],
           onIncompletePaymentFound
@@ -30,16 +29,23 @@
         console.log("Auth success:", auth);
 
         const uid = auth.user.uid;
-        console.log("User UID:", uid);
+        const walletAddress = auth.user.wallet_address;
 
-        // 🔥 A2U TESTNET CALL (SOLO DOPO AUTH)
+        console.log("User UID:", uid);
+        console.log("Wallet address:", walletAddress);
+
+        if (!walletAddress) {
+          alert("No wallet address found for this user.");
+          return;
+        }
+
         const response = await fetch("/api/a2u", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            uid: uid,
+            recipient: walletAddress,
             amount: 1
           })
         });
@@ -47,19 +53,17 @@
         const result = await response.json();
         console.log("A2U response:", result);
 
-        if (!response.ok) {
+        if (response.ok) {
+          alert("A2U request sent successfully.");
+        } else {
           alert("A2U error. Check console.");
-          return;
         }
 
-        alert("A2U request sent successfully.");
-
       } catch (err) {
-        console.error("Auth error:", err);
-        alert("Authentication failed.");
+        console.error("Login/A2U error:", err);
+        alert("Error occurred. Check console.");
       }
     });
   </script>
-
 </body>
 </html>
