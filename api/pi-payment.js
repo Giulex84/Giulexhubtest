@@ -21,12 +21,24 @@ export default async function handler(req, res) {
 
   try {
     if (action === "approve") {
-      const r = await fetch(`${BASE_URL}${paymentId}/approve`, {
-        method: "POST",
-        headers: {
-          Authorization: `Key ${PI_API_KEY}`,
-        },
-      });
+  const r = await fetch(`${BASE_URL}${paymentId}/approve`, {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${PI_API_KEY}`,
+      "Content-Type": "application/json"
+    }
+  });
+
+  const data = await r.json();
+  console.log("APPROVE RESPONSE:", data);
+
+  if (!r.ok) {
+    return res.status(500).json(data);
+  }
+
+  return res.status(200).json(data);
+}
+
 
       const data = await r.json();
       console.log("APPROVE RESPONSE:", data);
