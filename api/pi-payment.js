@@ -36,7 +36,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "PI_API_KEY not configured" });
   }
 
-  const BASE_URL = "https://api.minepi.com/v2/payments/";
+  const BASE_URL = "https://api.testnet.minepi.com/v2/payments/";
+
   const headers = {
     Authorization: `Key ${PI_API_KEY}`,
     "Content-Type": "application/json",
