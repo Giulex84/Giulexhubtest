@@ -1,37 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8" />
   <title>Giulex Hub Testnet</title>
+
+  <!-- PI SDK -->
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 </head>
 
 <body>
   <h1>Giulex Hub Testnet</h1>
-
   <button id="loginBtn">Login with Pi</button>
 
   <script>
-    console.log("Page loaded");
-
-    // 🔥 INIT PI SDK
-    Pi.init({
-      version: "2.0",
-    });
-
-    async function onIncompletePaymentFound(payment) {
-      console.log("Incomplete payment found:", payment);
-    }
-
     document.getElementById("loginBtn").addEventListener("click", async () => {
-
       try {
 
-        // 🔒 Safety check
+        // 🔐 Must be inside Pi Browser
         if (typeof Pi === "undefined") {
           alert("Open this app inside Pi Browser.");
           return;
         }
-console.log("Pi initialized");
+
+        // 🧪 TESTNET MODE
+        Pi.init({ version: "2.0", sandbox: true });
+
+        console.log("Pi initialized (Testnet)");
 
         // 🔐 LOGIN
         const auth = await Pi.authenticate(
@@ -43,49 +37,27 @@ console.log("Pi initialized");
 
         const uid = auth.user.uid;
         console.log("User UID:", uid);
-        <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
-<script>
-document.getElementById("loginBtn").addEventListener("click", async () => {
-  try {
+        // ===============================
+        // 🟣 STEP 1 — U2A (Initialize Wallet)
+        // ===============================
+        console.log("Creating U2A payment...");
 
-    if (typeof Pi === "undefined") {
-      alert("Open this app inside Pi Browser.");
-      return;
-    }
+        const payment = await Pi.createPayment({
+          amount: 0.1,
+          memo: "Wallet Initialization",
+          metadata: { init: true }
+        });
 
-    Pi.init({ version: "2.0", sandbox: true }); // TESTNET
+        console.log("U2A created:", payment);
 
-    console.log("Pi initialized");
+        alert("Approve the 0.1 Pi payment to initialize wallet.");
 
+        // ===============================
+        // 🔥 STEP 2 — A2U
+        // ===============================
+        console.log("Calling A2U...");
 
-    // 🟣 STEP 1 — U2A (User → App)
-    console.log("Creating U2A payment...");
-
-    const payment = await Pi.createPayment({
-      amount: 0.1,
-      memo: "Init Wallet Test",
-      metadata: { init: true }
-    });
-
-    console.log("Payment created:", payment);
-
-    alert("Approve the 0.1 Pi payment to initialize wallet.");
-
-  } catch (err) {
-    console.error("Login/U2A error:", err);
-    alert("Error during U2A. Check console.");
-  }
-});
-
-// Required callback
-function onIncompletePaymentFound(payment) {
-  console.log("Incomplete payment found:", payment);
-}
-</script>
-
-
-        // 🔥 A2U CALL
         const response = await fetch("/api/a2u", {
           method: "POST",
           headers: {
@@ -107,12 +79,15 @@ function onIncompletePaymentFound(payment) {
         }
 
       } catch (err) {
-        console.error("Login error:", err);
-        alert("Login failed. Check console.");
+        console.error("Flow error:", err);
+        alert("Operation failed. Check console.");
       }
-
     });
-  </script>
 
+    // Required callback
+    function onIncompletePaymentFound(payment) {
+      console.log("Incomplete payment found:", payment);
+    }
+  </script>
 </body>
 </html>
