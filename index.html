@@ -43,6 +43,57 @@ console.log("Pi initialized");
 
         const uid = auth.user.uid;
         console.log("User UID:", uid);
+        <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+<script>
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  try {
+
+    if (typeof Pi === "undefined") {
+      alert("Open this app inside Pi Browser.");
+      return;
+    }
+
+    Pi.init({ version: "2.0", sandbox: true }); // TESTNET
+
+    console.log("Pi initialized");
+
+    // 🔐 LOGIN
+    const auth = await Pi.authenticate(
+      ["username"],
+      onIncompletePaymentFound
+    );
+
+    console.log("Auth success:", auth);
+
+    const uid = auth.user.uid;
+    console.log("User UID:", uid);
+
+    // 🟣 STEP 1 — U2A (User → App)
+    console.log("Creating U2A payment...");
+
+    const payment = await Pi.createPayment({
+      amount: 0.1,
+      memo: "Init Wallet Test",
+      metadata: { init: true }
+    });
+
+    console.log("Payment created:", payment);
+
+    alert("Approve the 0.1 Pi payment to initialize wallet.");
+
+  } catch (err) {
+    console.error("Login/U2A error:", err);
+    alert("Error during U2A. Check console.");
+  }
+});
+
+// Required callback
+function onIncompletePaymentFound(payment) {
+  console.log("Incomplete payment found:", payment);
+}
+</script>
+
 
         // 🔥 A2U CALL
         const response = await fetch("/api/a2u", {
