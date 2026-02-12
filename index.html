@@ -58,16 +58,6 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
 
     console.log("Pi initialized");
 
-    // 🔐 LOGIN
-    const auth = await Pi.authenticate(
-      ["username"],
-      onIncompletePaymentFound
-    );
-
-    console.log("Auth success:", auth);
-
-    const uid = auth.user.uid;
-    console.log("User UID:", uid);
 
     // 🟣 STEP 1 — U2A (User → App)
     console.log("Creating U2A payment...");
