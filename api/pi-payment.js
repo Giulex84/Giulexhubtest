@@ -17,15 +17,16 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: "PI_API_KEY not set" });
   }
 
-  const BASE_URL = "https://api.testnet.minepi.com/v2/payments/";
+  // ✅ PRODUZIONE CORRETTA
+  const BASE_URL = "https://api.minepi.com/v2/payments/";
 
   try {
     if (action === "approve") {
       const r = await fetch(`${BASE_URL}${paymentId}/approve`, {
         method: "POST",
         headers: {
-          Authorization: `Key ${PI_API_KEY}`
-        }
+          Authorization: `Key ${PI_API_KEY}`,
+        },
       });
 
       const data = await r.json();
@@ -43,9 +44,9 @@ module.exports = async function handler(req, res) {
         method: "POST",
         headers: {
           Authorization: `Key ${PI_API_KEY}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ txid })
+        body: JSON.stringify({ txid }),
       });
 
       const data = await r.json();
