@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { uid, amount } = req.body || {};
+  const { uid, amount } = req.body;
 
   if (!uid || !amount) {
     return res.status(400).json({ error: "Missing uid or amount" });
@@ -13,75 +13,36 @@ export default async function handler(req, res) {
 
   const PI_API_KEY = process.env.PI_API_KEY;
 
-  if (!PI_API_KEY) {
-    return res.status(500).json({ error: "Missing PI_API_KEY" });
-  }
+  const paymentData = {
+    amount: amount,
+    memo: "GiulexHub Test Payment",
+    metadata: { uid: uid },
+    uid: uid
+  };
 
   try {
-    const createRes = await fetch(
+    const response = await fetch(
       "https://api.testnet.minepi.com/v2/payments",
       {
         method: "POST",
         headers: {
           Authorization: `Key ${PI_API_KEY}`,
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          payment: {
-            amount: Number(amount),
-            memo: "A2U Testnet payment",
-            metadata: {
-              type: "a2u-testnet",
-              timestamp: Date.now(),
-            },
-          },
-          uid: uid,
-        }),
+        body: JSON.stringify(paymentData)
       }
     );
 
-    const createData = await createRes.json();
-    console.log("CREATE RESPONSE:", createData);
+    const data = await response.json();
+    console.log("CREATE RESPONSE:", data);
 
-    if (!createRes.ok) {
-      return res.status(500).json({
-        error: "Create failed",
-        details: createData,
-      });
+    if (!response.ok) {
+      return res.status(500).json(data);
     }
 
-    const paymentId = createData.identifier;
-
-    // APPROVE
-    const approveRes = await fetch(
-      `https://api.testnet.minepi.com/v2/payments/${paymentId}/approve`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Key ${PI_API_KEY}`,
-        },
-      }
-    );
-
-    const approveData = await approveRes.json();
-    console.log("APPROVE RESPONSE:", approveData);
-
-    if (!approveRes.ok) {
-      return res.status(500).json({
-        error: "Approve failed",
-        details: approveData,
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      paymentId,
-    });
-
+    return res.status(200).json(data);
   } catch (err) {
-    return res.status(500).json({
-      error: "Server error",
-      message: err.message,
-    });
+    console.error("A2U ERROR:", err);
+    return res.status(500).json({ error: "Server error" });
   }
 }
