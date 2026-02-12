@@ -3,88 +3,88 @@
 <head>
   <meta charset="UTF-8" />
   <title>Giulex Hub Testnet</title>
-
-  <!-- PI SDK -->
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
 </head>
 
 <body>
   <h1>Giulex Hub Testnet</h1>
-  <button id="loginBtn">Login with Pi</button>
+  <button id="loginBtn">Login & Init Wallet</button>
 
   <script>
     document.getElementById("loginBtn").addEventListener("click", async () => {
       try {
 
-        // 🔐 Must be inside Pi Browser
         if (typeof Pi === "undefined") {
-          alert("Open this app inside Pi Browser.");
+          alert("Open inside Pi Browser.");
           return;
         }
 
-        // 🧪 TESTNET MODE
-        Pi.init({ version: "2.0", sandbox: true });
+        Pi.init({ version: "2.0" });
 
-        console.log("Pi initialized (Testnet)");
+        console.log("Pi initialized");
 
-        // 🔐 LOGIN
         const auth = await Pi.authenticate(
           ["username"],
           onIncompletePaymentFound
         );
 
-        console.log("Auth success:", auth);
-
-        const uid = auth.user.uid;
-        console.log("User UID:", uid);
+        console.log("Auth:", auth);
 
         // ===============================
-        // 🟣 STEP 1 — U2A (Initialize Wallet)
+        // 🔵 U2A CREATE
         // ===============================
-        console.log("Creating U2A payment...");
-
-        const payment = await Pi.createPayment({
-          amount: 0.1,
-          memo: "Wallet Initialization",
-          metadata: { init: true }
-        });
-
-        console.log("U2A created:", payment);
-
-        alert("Approve the 0.1 Pi payment to initialize wallet.");
-
-        // ===============================
-        // 🔥 STEP 2 — A2U
-        // ===============================
-        console.log("Calling A2U...");
-
-        const response = await fetch("/api/a2u", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
+        const payment = await Pi.createPayment(
+          {
+            amount: 0.1,
+            memo: "Wallet Initialization",
+            metadata: { init: true }
           },
-          body: JSON.stringify({
-            uid: uid,
-            amount: 1
-          })
-        });
+          {
+            onReadyForServerApproval: async function(paymentId) {
+              console.log("Ready for approval:", paymentId);
 
-        const data = await response.json();
-        console.log("A2U response:", data);
+              await fetch("/api/pi-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  action: "approve",
+                  paymentId: paymentId
+                })
+              });
+            },
 
-        if (response.ok) {
-          alert("A2U request sent successfully!");
-        } else {
-          alert("A2U error. Check console.");
-        }
+            onReadyForServerCompletion: async function(paymentId, txid) {
+              console.log("Ready for completion:", paymentId, txid);
+
+              await fetch("/api/pi-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  action: "complete",
+                  paymentId: paymentId,
+                  txid: txid
+                })
+              });
+
+              alert("U2A completed. Wallet initialized.");
+            },
+
+            onCancel: function(paymentId) {
+              console.log("Payment cancelled", paymentId);
+            },
+
+            onError: function(error, payment) {
+              console.error("Payment error", error);
+            }
+          }
+        );
 
       } catch (err) {
-        console.error("Flow error:", err);
-        alert("Operation failed. Check console.");
+        console.error("Error:", err);
+        alert("Operation failed.");
       }
     });
 
-    // Required callback
     function onIncompletePaymentFound(payment) {
       console.log("Incomplete payment found:", payment);
     }
