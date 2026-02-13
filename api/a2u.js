@@ -1,4 +1,4 @@
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   console.log("A2U RAW BODY:", req.body);
 
   if (req.method !== "POST") {
@@ -13,38 +13,32 @@ module.exports = async function handler(req, res) {
 
   const PI_API_KEY = process.env.PI_API_KEY;
 
-  if (!PI_API_KEY) {
-    return res.status(500).json({ error: "PI_API_KEY not configured" });
-  }
+  const BASE_URL = "https://api.minepi.com/v2/payments"; // NOT testnet
 
   try {
-    const response = await fetch(
-      "https://api.testnet.minepi.com/v2/payments",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Key ${PI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+    const r = await fetch(BASE_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${PI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        payment: {
           amount: amount,
-          memo: "GiulexHub A2U Test",
-          metadata: { uid },
-          uid: uid,
-        }),
-      }
-    );
+          memo: "A2U Test Payment",
+          metadata: { source: "GiulexHubA2U" },
+          uid: uid
+        }
+      })
+    });
 
-    const data = await response.json();
+    const data = await r.json();
     console.log("A2U CREATE RESPONSE:", data);
 
-    if (!response.ok) {
-      return res.status(500).json(data);
-    }
+    return res.status(r.status).json(data);
 
-    return res.status(200).json(data);
   } catch (err) {
     console.error("A2U ERROR:", err);
     return res.status(500).json({ error: "Server error" });
   }
-};
+}
