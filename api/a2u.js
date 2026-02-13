@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   const PI_API_KEY = process.env.PI_API_KEY;
 
-  const BASE_URL = "https://api.minepi.com/v2/payments";
+  const BASE_URL = "https://api.minepi.com/v2/payments"; // NOT testnet
 
   try {
     const r = await fetch(BASE_URL, {
@@ -34,24 +34,6 @@ export default async function handler(req, res) {
 
     const data = await r.json();
     console.log("A2U CREATE RESPONSE:", data);
-
-    // -------- TRACK UNIQUE WALLETS (NON ROMPE NULLA) --------
-    if (r.ok && data && data.from_address) {
-      globalThis.__A2U_WALLETS__ =
-        globalThis.__A2U_WALLETS__ || new Set();
-
-      globalThis.__A2U_WALLETS__.add(data.from_address);
-
-      console.log(
-        "UNIQUE WALLETS COUNT:",
-        globalThis.__A2U_WALLETS__.size
-      );
-
-      console.log(
-        "UNIQUE WALLETS LIST:",
-        Array.from(globalThis.__A2U_WALLETS__)
-      );
-    }
 
     return res.status(r.status).json(data);
 
