@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   const PI_API_KEY = process.env.PI_API_KEY;
 
-  const BASE_URL = "https://api.minepi.com/v2/payments"; // NOT testnet
+  const BASE_URL = "https://api.minepi.com/v2/payments";
 
   try {
     const r = await fetch(BASE_URL, {
@@ -35,6 +35,24 @@ export default async function handler(req, res) {
     const data = await r.json();
     console.log("A2U CREATE RESPONSE:", data);
 
+    // -------- TRACK UNIQUE WALLETS (NON ROMPE NULLA) --------
+    if (r.ok && data && data.from_address) {
+      globalThis.__A2U_WALLETS__ =
+        globalThis.__A2U_WALLETS__ || new Set();
+
+      globalThis.__A2U_WALLETS__.add(data.from_address);
+
+      console.log(
+        "UNIQUE WALLETS COUNT:",
+        globalThis.__A2U_WALLETS__.size
+      );
+
+      console.log(
+        "UNIQUE WALLETS LIST:",
+        Array.from(globalThis.__A2U_WALLETS__)
+      );
+    }
+
     return res.status(r.status).json(data);
 
   } catch (err) {
@@ -42,81 +60,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Server error" });
   }
 }
-
-
-
-
-
-
-api/pi-payent.js
-
-
-
-module.exports = async function handler(req, res) {
-  console.log("PI PAYMENT RAW BODY:", JSON.stringify(req.body));
-
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const { action, paymentId, txid } = req.body;
-
-  if (!action || !paymentId) {
-    return res.status(400).json({ error: "Missing action or paymentId" });
-  }
-
-  const PI_API_KEY = process.env.PI_API_KEY;
-
-  if (!PI_API_KEY) {
-    return res.status(500).json({ error: "PI_API_KEY not set" });
-  }
-
-  // ✅ PRODUZIONE CORRETTA
-  const BASE_URL = "https://api.minepi.com/v2/payments/";
-
-  try {
-    if (action === "approve") {
-      const r = await fetch(`${BASE_URL}${paymentId}/approve`, {
-        method: "POST",
-        headers: {
-          Authorization: `Key ${PI_API_KEY}`,
-        },
-      });
-
-      const data = await r.json();
-      console.log("APPROVE RESPONSE:", data);
-
-      if (!r.ok) {
-        return res.status(500).json(data);
-      }
-
-      return res.status(200).json(data);
-    }
-
-    if (action === "complete") {
-      const r = await fetch(`${BASE_URL}${paymentId}/complete`, {
-        method: "POST",
-        headers: {
-          Authorization: `Key ${PI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ txid }),
-      });
-
-      const data = await r.json();
-      console.log("COMPLETE RESPONSE:", data);
-
-      if (!r.ok) {
-        return res.status(500).json(data);
-      }
-
-      return res.status(200).json(data);
-    }
-
-    return res.status(400).json({ error: "Unknown action" });
-
-  } catch (err) {
-    console.error("SERVER ERROR:", err);
-    return res.status(500).json({ error: "Server error" });
-  }
-};
