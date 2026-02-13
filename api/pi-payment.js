@@ -20,49 +20,56 @@ module.exports = async function handler(req, res) {
   // ✅ PRODUZIONE CORRETTA
   const BASE_URL = "https://api.minepi.com/v2/payments/";
 
-  try {
-    if (action === "approve") {
-      const r = await fetch(`${BASE_URL}${paymentId}/approve`, {
-        method: "POST",
-        headers: {
-          Authorization: `Key ${PI_API_KEY}`,
-        },
-      });
+try {
 
-      const data = await r.json();
-      console.log("APPROVE RESPONSE:", data);
+  if (action === "approve") {
+    const r = await fetch(`${BASE_URL}${paymentId}/approve`, {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${PI_API_KEY}`,
+      },
+    });
 
-      if (!r.ok) {
-        return res.status(500).json(data);
-      }
+    const data = await r.json();
+    console.log("APPROVE RESPONSE:", data);
 
-      return res.status(200).json(data);
-    }
-
-    if (action === "complete") {
-      const r = await fetch(`${BASE_URL}${paymentId}/complete`, {
-        method: "POST",
-        headers: {
-          Authorization: `Key ${PI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ txid }),
-      });
-
-      const data = await r.json();
-      console.log("COMPLETE RESPONSE:", data);
-
-      if (!r.ok) {
-        return res.status(500).json(data);
-      }
-
-      return res.status(200).json(data);
-    }
-
-    return res.status(400).json({ error: "Unknown action" });
-
-  } catch (err) {
-    console.error("SERVER ERROR:", err);
-    return res.status(500).json({ error: "Server error" });
+    return res.status(r.status).json(data);
   }
+
+  if (action === "complete") {
+    const r = await fetch(`${BASE_URL}${paymentId}/complete`, {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${PI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ txid }),
+    });
+
+    const data = await r.json();
+    console.log("COMPLETE RESPONSE:", data);
+
+    return res.status(r.status).json(data);
+  }
+
+  if (action === "cancel") {
+    const r = await fetch(`${BASE_URL}${paymentId}/cancel`, {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${PI_API_KEY}`,
+      },
+    });
+
+    const data = await r.json();
+    console.log("CANCEL RESPONSE:", data);
+
+    return res.status(r.status).json(data);
+  }
+
+  return res.status(400).json({ error: "Unknown action" });
+
+} catch (err) {
+  console.error("SERVER ERROR:", err);
+  return res.status(500).json({ error: "Server error" });
+}
 };
