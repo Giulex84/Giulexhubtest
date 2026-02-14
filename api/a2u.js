@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   console.log("A2U RAW BODY:", req.body);
 
   if (req.method !== "POST") {
@@ -6,19 +6,22 @@ export default async function handler(req, res) {
   }
 
   const { uid, amount } = req.body;
+
   if (!uid || !amount) {
     return res.status(400).json({ error: "Missing uid or amount" });
   }
 
   const PI_API_KEY = process.env.PI_API_KEY;
+
   if (!PI_API_KEY) {
-    return res.status(500).json({ error: "PI_API_KEY not configured" });
+    return res.status(500).json({ error: "PI_API_KEY not set" });
   }
 
-  const BASE = "https://api.minepi.com/v2/payments";
+  const BASE_URL = "https://api.minepi.com/v2/payments";
 
-  async function createA2U() {
-    const r = await fetch(BASE, {
+  try {
+    // CREATE
+    const createRes = await fetch(BASE_URL, {
       method: "POST",
       headers: {
         Authorization: `Key ${PI_API_KEY}`,
@@ -34,54 +37,30 @@ export default async function handler(req, res) {
       }),
     });
 
-    const data = await r.json();
-    console.log("A2U CREATE RESPONSE:", data);
-    return { r, data };
-  }
+    const createData = await createRes.json();
+    console.log("A2U CREATE RESPONSE:", createData);
 
-  async function cancelPayment(paymentId) {
-    const r = await fetch(`${BASE}/${paymentId}/cancel`, {
+    if (!createRes.ok) {
+      return res.status(createRes.status).json(createData);
+    }
+
+    const paymentId = createData.identifier;
+
+    // APPROVE
+    await fetch(`${BASE_URL}/${paymentId}/approve`, {
       method: "POST",
-      headers: { Authorization: `Key ${PI_API_KEY}` },
+      headers: {
+        Authorization: `Key ${PI_API_KEY}`,
+      },
     });
-    const data = await r.json();
-    console.log("A2U CANCEL RESPONSE:", data);
-    return { r, data };
-  }
 
-  try {
-    // 1) First attempt
-    let { r, data } = await createA2U();
+    return res.status(200).json({
+      success: true,
+      paymentId: paymentId,
+    });
 
-    // Success
-    if (r.ok) {
-      // log identifier sempre
-      if (data?.identifier) console.log("A2U IDENTIFIER:", data.identifier);
-      return res.status(200).json(data);
-    }
-
-    // 2) If ongoing payment found: cancel it and retry once
-    if (data?.error === "ongoing_payment_found" && data?.payment?.identifier) {
-      const pendingId = data.payment.identifier;
-      console.log("A2U ONGOING FOUND, pendingId:", pendingId);
-
-      // cancel pending
-      await cancelPayment(pendingId);
-
-      // retry once
-      const retry = await createA2U();
-      if (retry.r.ok) {
-        if (retry.data?.identifier) console.log("A2U IDENTIFIER:", retry.data.identifier);
-        return res.status(200).json(retry.data);
-      }
-
-      return res.status(retry.r.status).json(retry.data);
-    }
-
-    // Other errors
-    return res.status(r.status).json(data);
   } catch (err) {
     console.error("A2U ERROR:", err);
     return res.status(500).json({ error: "Server error" });
   }
-}
+};
