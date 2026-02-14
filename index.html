@@ -5,7 +5,6 @@
   <title>Giulex Hub – Pi Payments Testnet</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Pi SDK -->
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <script>
     Pi.init({ version: "2.0" });
@@ -20,7 +19,7 @@
       justify-content: center;
       background: #0b1020;
       color: #e5e7eb;
-      font-family: system-ui, -apple-system;
+      font-family: system-ui;
     }
     .app {
       max-width: 420px;
@@ -42,14 +41,10 @@
       color: #111827;
       margin-bottom: 12px;
     }
-    button.secondary {
+    .secondary {
       background: transparent;
       color: #e5e7eb;
       border: 1px solid rgba(148, 163, 184, 0.5);
-    }
-    button:disabled {
-      opacity: 0.5;
-      cursor: default;
     }
     .status {
       padding: 10px;
@@ -58,141 +53,127 @@
       background: #020617;
       white-space: pre-line;
     }
-    .ok { border: 1px solid #22c55e; }
-    .error { border: 1px solid #ef4444; }
   </style>
 </head>
 
 <body>
-  <main class="app">
-    <h2>Giulex Hub</h2>
-    <p>Pi Payments – Testnet</p>
+<main class="app">
+  <h2>Giulex Hub</h2>
+  <p>Pi Payments – Testnet</p>
 
-    <button id="login">Login with Pi</button>
-    <button id="pay" class="secondary" style="display:none;">
-      Paga 1 Test-Pi (U2A)
-    </button>
-    <button id="a2u" class="secondary" style="display:none;">
-      Invia 1 Pi all’App (A2U)
-    </button>
+  <button id="login">Login with Pi</button>
+  <button id="u2a" class="secondary" style="display:none;">U2A – Paga 1 Test-Pi</button>
+  <button id="a2u" class="secondary" style="display:none;">A2U – Ricevi 1 Test-Pi</button>
 
-    <div id="status" class="status">Stato: inattivo</div>
-  </main>
+  <div id="status" class="status">Stato: inattivo</div>
+</main>
 
 <script>
 const loginBtn = document.getElementById("login");
-const payBtn = document.getElementById("pay");
+const u2aBtn = document.getElementById("u2a");
 const a2uBtn = document.getElementById("a2u");
 const statusEl = document.getElementById("status");
 
 let piUser = null;
 
-const scopes = ["username", "payments", "wallet_address"];
-
 function onIncompletePayment(payment) {
-  console.log("Incomplete payment found", payment);
+  console.log("Incomplete payment", payment);
 }
 
 loginBtn.onclick = async () => {
-  loginBtn.disabled = true;
-  statusEl.textContent = "Autenticazione Pi in corso…";
-
   try {
-    const auth = await Pi.authenticate(scopes, onIncompletePayment);
+    const auth = await Pi.authenticate(
+      ["username", "payments", "wallet_address"],
+      onIncompletePayment
+    );
+
     piUser = auth.user;
 
-    statusEl.textContent = "Auth completata ✅";
-    statusEl.classList.add("ok");
-
+    statusEl.textContent = "Login completato ✅";
     loginBtn.style.display = "none";
-    payBtn.style.display = "block";
+    u2aBtn.style.display = "block";
     a2uBtn.style.display = "block";
 
   } catch (err) {
-    console.error(err);
     statusEl.textContent = "Errore autenticazione";
-    statusEl.classList.add("error");
-    loginBtn.disabled = false;
   }
 };
 
-/* ---------------- U2A ---------------- */
-
-payBtn.onclick = async () => {
-  statusEl.textContent = "Avvio pagamento U2A…";
-
+u2aBtn.onclick = async () => {
   Pi.createPayment(
     {
       amount: 1,
       memo: "Giulex Hub Test Payment",
-      metadata: { app: "GiulexHub" }
+      metadata: { type: "U2A" }
     },
     {
       onReadyForServerApproval: async (paymentId) => {
         await fetch("/api/pi-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "approve",
-            paymentId
-          })
+          body: JSON.stringify({ action: "approve", paymentId })
         });
       },
-
       onReadyForServerCompletion: async (paymentId, txid) => {
         await fetch("/api/pi-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "complete",
-            paymentId,
-            txid
-          })
+          body: JSON.stringify({ action: "complete", paymentId, txid })
         });
-
-        statusEl.textContent = "Pagamento U2A completato ✅";
-        statusEl.classList.add("ok");
-      },
-
-      onCancel: () => {
-        statusEl.textContent = "Pagamento annullato";
-        statusEl.classList.add("error");
-      },
-
-      onError: (err) => {
-        console.error(err);
-        statusEl.textContent = "Errore pagamento";
-        statusEl.classList.add("error");
+        statusEl.textContent = "U2A completato ✅";
       }
     }
   );
 };
 
-/* ---------------- A2U ---------------- */
-
 a2uBtn.onclick = async () => {
-  statusEl.textContent = "Creazione A2U…";
+  statusEl.textContent = "Creazione A2U...";
 
-  const response = await fetch("/api/a2u", {
+  const r = await fetch("/api/a2u", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      uid: piUser.uid,
-      amount: 1
-    })
+    body: JSON.stringify({ uid: piUser.uid, amount: 1 })
   });
 
-  const data = await response.json();
-  console.log("A2U RESPONSE:", data);
+  const data = await r.json();
 
-  if (response.ok) {
-    statusEl.textContent = "A2U creato. Controlla Wallet.";
-    statusEl.classList.add("ok");
-  } else {
+  if (!data.success) {
     statusEl.textContent = "Errore A2U";
-    statusEl.classList.add("error");
+    return;
   }
+
+  const paymentId = data.paymentId;
+
+  statusEl.textContent = "A2U creata. Attendi firma nel wallet...";
+
+  // Polling ogni 3 secondi
+  const interval = setInterval(async () => {
+    const check = await fetch("/api/check-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentId })
+    });
+
+    const result = await check.json();
+
+    if (result.transaction_verified) {
+      clearInterval(interval);
+
+      await fetch("/api/pi-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "complete",
+          paymentId,
+          txid: result.txid
+        })
+      });
+
+      statusEl.textContent = "A2U completato ✅";
+    }
+  }, 3000);
 };
 </script>
+
 </body>
 </html>
