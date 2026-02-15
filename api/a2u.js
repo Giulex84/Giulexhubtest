@@ -129,7 +129,8 @@ module.exports = async function handler(req, res) {
     const account = await server.loadAccount(keypair.publicKey());
 
     const tx = new TransactionBuilder(account, {
-      fee: BASE_FEE,
+      fee: "1000000",
+
       networkPassphrase: "Pi Testnet",
     })
       .addMemo(Memo.text(paymentId))
