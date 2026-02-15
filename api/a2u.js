@@ -7,11 +7,8 @@ const {
   Keypair,
   BASE_FEE,
   Memo,
+  Networks,
 } = StellarSdk;
-
-const server = new StellarSdk.Horizon.Server(
-  "https://api.testnet.minepi.com"
-);
 
 module.exports = async function handler(req, res) {
   console.log("A2U RAW BODY:", req.body);
@@ -40,11 +37,10 @@ module.exports = async function handler(req, res) {
   const BASE_URL = "https://api.minepi.com/v2/payments";
 
   try {
-    // ============================
+    // ===============================
     // 1️⃣ CREATE PAYMENT
-    // ============================
-
-    const createRes = await fetch(BASE_URL, {
+    // ===============================
+    let createRes = await fetch(BASE_URL, {
       method: "POST",
       headers: {
         Authorization: `Key ${PI_API_KEY}`,
@@ -52,16 +48,56 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         payment: {
-          amount: amount,
+          amount,
           memo: "A2U Test Payment",
           metadata: { source: "GiulexHubA2U" },
-          uid: uid,
+          uid,
         },
       }),
     });
 
-    const createData = await createRes.json();
+    let createData = await createRes.json();
     console.log("A2U CREATE RESPONSE:", createData);
+
+    // ===============================
+    // 🔥 AUTO CANCEL IF ONGOING
+    // ===============================
+    if (
+      createData.error === "ongoing_payment_found" &&
+      createData.payment?.identifier
+    ) {
+      const ongoingId = createData.payment.identifier;
+      console.log("ONGOING FOUND → Cancelling:", ongoingId);
+
+      await fetch(`${BASE_URL}/${ongoingId}/cancel`, {
+        method: "POST",
+        headers: {
+          Authorization: `Key ${PI_API_KEY}`,
+        },
+      });
+
+      console.log("ONGOING CANCELLED");
+
+      // Retry create
+      createRes = await fetch(BASE_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Key ${PI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          payment: {
+            amount,
+            memo: "A2U Test Payment",
+            metadata: { source: "GiulexHubA2U" },
+            uid,
+          },
+        }),
+      });
+
+      createData = await createRes.json();
+      console.log("A2U RETRY CREATE:", createData);
+    }
 
     if (!createRes.ok) {
       return res.status(createRes.status).json(createData);
@@ -70,10 +106,9 @@ module.exports = async function handler(req, res) {
     const paymentId = createData.identifier;
     const destination = createData.to_address;
 
-    // ============================
+    // ===============================
     // 2️⃣ APPROVE
-    // ============================
-
+    // ===============================
     await fetch(`${BASE_URL}/${paymentId}/approve`, {
       method: "POST",
       headers: {
@@ -83,22 +118,24 @@ module.exports = async function handler(req, res) {
 
     console.log("A2U APPROVED:", paymentId);
 
-    // ============================
+    // ===============================
     // 3️⃣ SUBMIT ON-CHAIN (AUTO SIGN)
-    // ============================
+    // ===============================
+    const server = new StellarSdk.Horizon.Server(
+      "https://api.testnet.minepi.com"
+    );
 
     const keypair = Keypair.fromSecret(APP_SEED);
-
     const account = await server.loadAccount(keypair.publicKey());
 
     const tx = new TransactionBuilder(account, {
-      fee: String(BASE_FEE),
-      networkPassphrase: "Pi Testnet",
+      fee: BASE_FEE,
+      networkPassphrase: Networks.TESTNET,
     })
       .addMemo(Memo.text(paymentId))
       .addOperation(
         Operation.payment({
-          destination: destination,
+          destination,
           asset: Asset.native(),
           amount: Number(amount).toFixed(7),
         })
@@ -113,10 +150,9 @@ module.exports = async function handler(req, res) {
 
     console.log("HORIZON TX SUCCESS:", txid);
 
-    // ============================
-    // 4️⃣ COMPLETE PAYMENT
-    // ============================
-
+    // ===============================
+    // 4️⃣ COMPLETE
+    // ===============================
     const completeRes = await fetch(
       `${BASE_URL}/${paymentId}/complete`,
       {
@@ -141,7 +177,6 @@ module.exports = async function handler(req, res) {
       paymentId,
       txid,
     });
-
   } catch (err) {
     console.error("A2U ERROR:", err);
     return res.status(500).json({
