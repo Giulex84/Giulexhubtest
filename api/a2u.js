@@ -130,7 +130,7 @@ module.exports = async function handler(req, res) {
 
     const tx = new TransactionBuilder(account, {
       fee: BASE_FEE,
-      networkPassphrase: Networks.TESTNET,
+      networkPassphrase: "Pi Testnet",
     })
       .addMemo(Memo.text(paymentId.substring(0, 28)))
       .addOperation(
