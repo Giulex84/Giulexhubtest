@@ -1,13 +1,14 @@
+const StellarSdk = require("@stellar/stellar-sdk");
+
 const {
-  Server,
-  Networks,
   TransactionBuilder,
   Operation,
   Asset,
   Keypair,
   BASE_FEE,
   Memo,
-} = require("@stellar/stellar-sdk");
+} = StellarSdk;
+
 
 module.exports = async function handler(req, res) {
   console.log("A2U RAW BODY:", req.body);
