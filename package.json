@@ -1,0 +1,9 @@
+{
+  "name": "giulexhubtest",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@stellar/stellar-sdk": "^12.2.0"
+  }
+}
+
