@@ -66,7 +66,7 @@ module.exports = async function handler(req, res) {
     const destination = createData.to_address;
 
     // =========================
-    // 2️⃣ APPROVE PAYMENT
+    // 2️⃣ APPROVE
     // =========================
     await fetch(`${BASE_URL}/${paymentId}/approve`, {
       method: "POST",
@@ -87,7 +87,7 @@ module.exports = async function handler(req, res) {
 
     const tx = new TransactionBuilder(account, {
       fee: String(BASE_FEE),
-      networkPassphrase: "Pi Testnet",
+      networkPassphrase: Networks.TESTNET,
     })
       .addMemo(Memo.text(paymentId))
       .addOperation(
@@ -108,7 +108,7 @@ module.exports = async function handler(req, res) {
     console.log("HORIZON TX SUCCESS:", txid);
 
     // =========================
-    // 4️⃣ COMPLETE PAYMENT
+    // 4️⃣ COMPLETE
     // =========================
     const completeRes = await fetch(
       `${BASE_URL}/${paymentId}/complete`,
