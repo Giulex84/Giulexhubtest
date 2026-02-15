@@ -9,6 +9,9 @@ const {
   Memo,
 } = StellarSdk;
 
+const server = new StellarSdk.Horizon.Server(
+  "https://api.testnet.minepi.com"
+);
 
 module.exports = async function handler(req, res) {
   console.log("A2U RAW BODY:", req.body);
@@ -37,9 +40,10 @@ module.exports = async function handler(req, res) {
   const BASE_URL = "https://api.minepi.com/v2/payments";
 
   try {
-    // =========================
+    // ============================
     // 1️⃣ CREATE PAYMENT
-    // =========================
+    // ============================
+
     const createRes = await fetch(BASE_URL, {
       method: "POST",
       headers: {
@@ -66,9 +70,10 @@ module.exports = async function handler(req, res) {
     const paymentId = createData.identifier;
     const destination = createData.to_address;
 
-    // =========================
+    // ============================
     // 2️⃣ APPROVE
-    // =========================
+    // ============================
+
     await fetch(`${BASE_URL}/${paymentId}/approve`, {
       method: "POST",
       headers: {
@@ -78,17 +83,17 @@ module.exports = async function handler(req, res) {
 
     console.log("A2U APPROVED:", paymentId);
 
-    // =========================
+    // ============================
     // 3️⃣ SUBMIT ON-CHAIN (AUTO SIGN)
-    // =========================
-    const server = new Server("https://api.testnet.minepi.com");
+    // ============================
+
     const keypair = Keypair.fromSecret(APP_SEED);
 
     const account = await server.loadAccount(keypair.publicKey());
 
     const tx = new TransactionBuilder(account, {
       fee: String(BASE_FEE),
-      networkPassphrase: Networks.TESTNET,
+      networkPassphrase: "Pi Testnet",
     })
       .addMemo(Memo.text(paymentId))
       .addOperation(
@@ -108,9 +113,10 @@ module.exports = async function handler(req, res) {
 
     console.log("HORIZON TX SUCCESS:", txid);
 
-    // =========================
-    // 4️⃣ COMPLETE
-    // =========================
+    // ============================
+    // 4️⃣ COMPLETE PAYMENT
+    // ============================
+
     const completeRes = await fetch(
       `${BASE_URL}/${paymentId}/complete`,
       {
