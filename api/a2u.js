@@ -132,7 +132,7 @@ module.exports = async function handler(req, res) {
       fee: BASE_FEE,
       networkPassphrase: "Pi Testnet",
     })
-      .addMemo(Memo.text(paymentId.substring(0, 28)))
+      .addMemo(Memo.text(paymentId))
       .addOperation(
         Operation.payment({
           destination,
