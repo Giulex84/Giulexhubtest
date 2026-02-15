@@ -37,20 +37,37 @@ try {
   }
 
   if (action === "complete") {
-    const r = await fetch(`${BASE_URL}${paymentId}/complete`, {
-      method: "POST",
-      headers: {
-        Authorization: `Key ${PI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ txid }),
+  const r = await fetch(`${BASE_URL}${paymentId}/complete`, {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${PI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ txid }),
+  });
+
+  const data = await r.json();
+  console.log("COMPLETE RESPONSE:", data);
+
+  // 🔥 IDPOTENT SUCCESS
+  if (data.error === "already_completed") {
+    return res.status(200).json({
+      success: true,
+      message: "Payment already completed",
+      payment: data.payment,
     });
+  }
 
-    const data = await r.json();
-    console.log("COMPLETE RESPONSE:", data);
-
+  if (!r.ok) {
     return res.status(r.status).json(data);
   }
+
+  return res.status(200).json({
+    success: true,
+    payment: data,
+  });
+}
+
 
   if (action === "cancel") {
     const r = await fetch(`${BASE_URL}${paymentId}/cancel`, {
