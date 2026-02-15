@@ -178,7 +178,8 @@ module.exports = async function handler(req, res) {
       txid,
     });
   } catch (err) {
-    console.error("A2U ERROR:", err);
+    console.error("HORIZON ERROR DATA:", err.response?.data);
+
     return res.status(500).json({
       error: "A2U processing failed",
       details: err.message,
