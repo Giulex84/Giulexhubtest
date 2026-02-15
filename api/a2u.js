@@ -132,7 +132,7 @@ module.exports = async function handler(req, res) {
       fee: BASE_FEE,
       networkPassphrase: Networks.TESTNET,
     })
-      .addMemo(Memo.text(paymentId))
+      .addMemo(Memo.text(paymentId.substring(0, 28)))
       .addOperation(
         Operation.payment({
           destination,
