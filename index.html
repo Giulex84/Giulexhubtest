@@ -2,8 +2,8 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <title>Giulex Hub – Pi Payments Testnet</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arena Lab – Testnet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <script>
@@ -14,41 +14,49 @@
     body {
       margin: 0;
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #0b1020;
-      color: #e5e7eb;
       font-family: system-ui;
+      background: #10101a;
+      color: #eef0fb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .app {
-      max-width: 420px;
-      width: 100%;
+      width: 420px;
       background: #0f172a;
+      padding: 22px;
       border-radius: 16px;
-      padding: 24px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
+      border: 1px solid #3a3f58;
       text-align: center;
+    }
+    .lab-badge {
+      background: #ff9800;
+      color: #000;
+      font-weight: bold;
+      padding: 6px 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      font-size: 14px;
     }
     button {
       width: 100%;
       border-radius: 999px;
-      border: none;
       padding: 12px;
-      font-weight: 600;
       cursor: pointer;
-      background: #f97316;
-      color: #111827;
-      margin-bottom: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      margin-top: 12px;
+      background: #5a6cff;
+      color: #fff;
     }
-    .secondary {
+    button.secondary {
       background: transparent;
-      color: #e5e7eb;
       border: 1px solid rgba(148, 163, 184, 0.5);
+      color: #eef0fb;
     }
-    .status {
+    #status {
+      margin-top: 15px;
       padding: 10px;
-      font-size: 0.8rem;
       border-radius: 8px;
       background: #020617;
       white-space: pre-line;
@@ -57,123 +65,132 @@
 </head>
 
 <body>
-<main class="app">
-  <h2>Giulex Hub</h2>
-  <p>Pi Payments – Testnet</p>
+  <main class="app">
+    <div class="lab-badge">⚙️ ARENA LAB – TESTNET MODE</div>
 
-  <button id="login">Login with Pi</button>
-  <button id="u2a" class="secondary" style="display:none;">U2A – Paga 1 Test-Pi</button>
-  <button id="a2u" class="secondary" style="display:none;">A2U – Ricevi 1 Test-Pi</button>
+    <h2>Arena Lab</h2>
+    <p>Sandbox environment for payment flow testing</p>
 
-  <div id="status" class="status">Stato: inattivo</div>
-</main>
+    <button id="login">Login with Pi</button>
+    <button id="u2a" class="secondary" style="display:none;">U2A - Test Payment</button>
+    <button id="a2u" class="secondary" style="display:none;">A2U - Receive Test-Pi</button>
 
-<script>
-const loginBtn = document.getElementById("login");
-const u2aBtn = document.getElementById("u2a");
-const a2uBtn = document.getElementById("a2u");
-const statusEl = document.getElementById("status");
+    <div id="status">State: inactive</div>
+  </main>
 
-let piUser = null;
+  <script>
+    const loginBtn = document.getElementById("login");
+    const u2aBtn = document.getElementById("u2a");
+    const a2uBtn = document.getElementById("a2u");
+    const statusEl = document.getElementById("status");
 
-function onIncompletePayment(payment) {
-  console.log("Incomplete payment", payment);
-}
+    let piUser = null;
 
-loginBtn.onclick = async () => {
-  try {
-    const auth = await Pi.authenticate(
-      ["username", "payments", "wallet_address"],
-      onIncompletePayment
-    );
+    function onIncompletePayment(payment) {
+      console.log("Incomplete payment", payment);
+      statusEl.textContent = `Incomplete payment found:\n${JSON.stringify(payment)}`;
+    }
 
-    piUser = auth.user;
+    loginBtn.onclick = async () => {
+      try {
+        statusEl.textContent = "Authenticating...";
+        const auth = await Pi.authenticate(
+          ["username", "payments", "wallet_address"],
+          onIncompletePayment
+        );
 
-    statusEl.textContent = "Login completato ✅";
-    loginBtn.style.display = "none";
-    u2aBtn.style.display = "block";
-    a2uBtn.style.display = "block";
-
-  } catch (err) {
-    statusEl.textContent = "Errore autenticazione";
-  }
-};
-
-u2aBtn.onclick = async () => {
-  Pi.createPayment(
-    {
-      amount: 1,
-      memo: "Giulex Hub Test Payment",
-      metadata: { type: "U2A" }
-    },
-    {
-      onReadyForServerApproval: async (paymentId) => {
-        await fetch("/api/pi-payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "approve", paymentId })
-        });
-      },
-      onReadyForServerCompletion: async (paymentId, txid) => {
-        await fetch("/api/pi-payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "complete", paymentId, txid })
-        });
-        statusEl.textContent = "U2A completato ✅";
+        piUser = auth.user;
+        statusEl.textContent = `Logged in as: ${piUser.username}`;
+        loginBtn.style.display = "none";
+        u2aBtn.style.display = "block";
+        a2uBtn.style.display = "block";
+        
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = `Authentication error`;
       }
-    }
-  );
-};
+    };
 
-a2uBtn.onclick = async () => {
-  statusEl.textContent = "Creazione A2U...";
+    u2aBtn.onclick = async () => {
+      statusEl.textContent = "Creating U2A test payment...";
+      try {
+        await Pi.createPayment(
+          {
+            amount: 1,
+            memo: "Arena Lab – Test Payment",
+            metadata: { type: "U2A" },
+          },
+          {
+            onReadyForServerApproval: async (paymentId) => {
+              statusEl.textContent = `Approving payment: ${paymentId}`;
+              await fetch("/api/pi-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "approve", paymentId }),
+              });
+            },
+            onReadyForServerCompletion: async (paymentId, txid) => {
+              statusEl.textContent = `Completing payment: ${paymentId} (txid: ${txid})`;
+              await fetch("/api/pi-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "complete", paymentId, txid }),
+              });
+              statusEl.textContent = `U2A completed ✔️`;
+            },
+          }
+        );
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "U2A failed ❌";
+      }
+    };
 
-  const r = await fetch("/api/a2u", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ uid: piUser.uid, amount: 1 })
-  });
+    a2uBtn.onclick = async () => {
+      statusEl.textContent = "Requesting A2U test creation...";
+      try {
+        const r = await fetch("/api/a2u", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid: piUser.uid, amount: 1 }),
+        });
 
-  const data = await r.json();
+        const data = await r.json();
+        if (!data.success) {
+          statusEl.textContent = "Error creating A2U test";
+          return;
+        }
 
-  if (!data.success) {
-    statusEl.textContent = "Errore A2U";
-    return;
-  }
+        const paymentId = data.paymentId;
+        statusEl.textContent = `A2U created. Waiting for on-chain sign...`;
 
-  const paymentId = data.paymentId;
+        const interval = setInterval(async () => {
+          const check = await fetch("/api/check-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentId }),
+          });
 
-  statusEl.textContent = "A2U creata. Attendi firma nel wallet...";
+          const result = await check.json();
 
-  // Polling ogni 3 secondi
-  const interval = setInterval(async () => {
-    const check = await fetch("/api/check-payment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paymentId })
-    });
+          if (result.transaction_verified) {
+            clearInterval(interval);
 
-    const result = await check.json();
+            await fetch("/api/pi-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "complete", paymentId, txid: result.txid }),
+            });
 
-    if (result.transaction_verified) {
-      clearInterval(interval);
+            statusEl.textContent = "A2U completed ✔️";
+          }
+        }, 3000);
 
-      await fetch("/api/pi-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "complete",
-          paymentId,
-          txid: result.txid
-        })
-      });
-
-      statusEl.textContent = "A2U completato ✅";
-    }
-  }, 3000);
-};
-</script>
-
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "A2U failed ❌";
+      }
+    };
+  </script>
 </body>
 </html>
