@@ -1,12 +1,10 @@
-# Giulex Hub – Pi Network Testnet
+Arena Lab – Pi Network Testnet Environment
 
-Giulex Hub is a Pi Network **Testnet** web application used to validate
-authentication and payment flows with the Pi SDK.
+This application is the sandbox and testing environment
+for Arena (Mainnet version).
 
-- Testnet only (Test-Pi)
-- No real value
-- No rewards or incentives
-- Authentication via Pi Browser
-- Payments via Pi SDK
-
-Privacy Policy and Terms of Service are included in this repository.
+Used for:
+- Payment flow validation
+- A2U & U2A testing
+- Gameplay experiments
+- New feature prototyping
