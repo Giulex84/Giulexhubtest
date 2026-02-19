@@ -1,6 +1,4 @@
-module.exports = async function handler(req, res) {
-  console.log("PI PAYMENT RAW BODY:", JSON.stringify(req.body));
-
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -8,7 +6,7 @@ module.exports = async function handler(req, res) {
   const { action, paymentId, txid } = req.body;
 
   if (!action || !paymentId) {
-    return res.status(400).json({ error: "Missing action or paymentId" });
+    return res.status(400).json({ error: "Missing parameters" });
   }
 
   const PI_API_KEY = process.env.PI_API_KEY;
@@ -17,76 +15,42 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: "PI_API_KEY not set" });
   }
 
-  // ✅ PRODUZIONE CORRETTA
-  const BASE_URL = "https://api.minepi.com/v2/payments/";
+  // ⚠️ TESTNET ENDPOINT (giulexhub test)
+  const BASE_URL = "https://api.testnet.minepi.com/v2/payments";
 
-try {
+  let url = "";
+  let payload = undefined;
 
   if (action === "approve") {
-    const r = await fetch(`${BASE_URL}${paymentId}/approve`, {
-      method: "POST",
-      headers: {
-        Authorization: `Key ${PI_API_KEY}`,
-      },
-    });
-
-    const data = await r.json();
-    console.log("APPROVE RESPONSE:", data);
-
-    return res.status(r.status).json(data);
+    url = `${BASE_URL}/${paymentId}/approve`;
   }
 
   if (action === "complete") {
-  const r = await fetch(`${BASE_URL}${paymentId}/complete`, {
-    method: "POST",
-    headers: {
-      Authorization: `Key ${PI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ txid }),
-  });
-
-  const data = await r.json();
-  console.log("COMPLETE RESPONSE:", data);
-
-  // 🔥 IDPOTENT SUCCESS
-  if (data.error === "already_completed") {
-    return res.status(200).json({
-      success: true,
-      message: "Payment already completed",
-      payment: data.payment,
-    });
+    url = `${BASE_URL}/${paymentId}/complete`;
+    payload = { txid };
   }
-
-  if (!r.ok) {
-    return res.status(r.status).json(data);
-  }
-
-  return res.status(200).json({
-    success: true,
-    payment: data,
-  });
-}
-
 
   if (action === "cancel") {
-    const r = await fetch(`${BASE_URL}${paymentId}/cancel`, {
+    url = `${BASE_URL}/${paymentId}/cancel`;
+  }
+
+  try {
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Key ${PI_API_KEY}`,
+        "Content-Type": "application/json",
       },
+      body: payload ? JSON.stringify(payload) : undefined,
     });
 
-    const data = await r.json();
-    console.log("CANCEL RESPONSE:", data);
+    const data = await response.json();
 
-    return res.status(r.status).json(data);
+    console.log("PI TEST RESPONSE:", data);
+
+    return res.status(response.status).json(data);
+  } catch (error) {
+    console.error("PI TEST ERROR:", error);
+    return res.status(500).json({ error: "Server error" });
   }
-
-  return res.status(400).json({ error: "Unknown action" });
-
-} catch (err) {
-  console.error("SERVER ERROR:", err);
-  return res.status(500).json({ error: "Server error" });
 }
-};
