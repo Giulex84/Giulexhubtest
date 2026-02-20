@@ -1,201 +1,237 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <title>Arena Lab – Testnet</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8" />
+<title>giulexhubtest – Pi Testnet</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-  <script>
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  // ✅ TESTNET SANDBOX
   Pi.init({
-  version: "2.0",
-});
-  </script>
+    version: "2.0",
+    sandbox: true
+  });
 
-  <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: system-ui;
-      background: #10101a;
-      color: #eef0fb;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .app {
-      width: 420px;
-      background: #0f172a;
-      padding: 22px;
-      border-radius: 16px;
-      border: 1px solid #3a3f58;
-      text-align: center;
-    }
-    .lab-badge {
-      background: #ff9800;
-      color: #000;
-      font-weight: bold;
-      padding: 6px 12px;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      font-size: 14px;
-    }
-    button {
-      width: 100%;
-      border-radius: 999px;
-      padding: 12px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 1rem;
-      margin-top: 12px;
-      background: #5a6cff;
-      color: #fff;
-    }
-    button.secondary {
-      background: transparent;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      color: #eef0fb;
-    }
-    #status {
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 8px;
-      background: #020617;
-      white-space: pre-line;
-    }
-  </style>
+});
+</script>
+
+<style>
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui;
+  background: #0f1016;
+  color: #eef0fb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.app {
+  width: 420px;
+  background: #1b1f2a;
+  padding: 22px;
+  border-radius: 16px;
+  border: 1px solid #3a3f58;
+  text-align: center;
+}
+.badge {
+  background: #ffcc00;
+  color: #000;
+  font-weight: bold;
+  padding: 6px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+button {
+  width: 100%;
+  border-radius: 999px;
+  padding: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 12px;
+  background: #4a6cff;
+  color: #fff;
+  border: none;
+}
+button.secondary {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  color: #eef0fb;
+}
+#status {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #202635;
+  white-space: pre-line;
+}
+.links {
+  text-align:center;
+  margin-top:30px;
+  font-size:14px;
+}
+.links a {
+  color:#fff;
+  text-decoration:none;
+  margin:0 8px;
+}
+</style>
 </head>
 
 <body>
-  <main class="app">
-    <div class="lab-badge">⚙️ ARENA LAB – TESTNET MODE</div>
 
-    <h2>Arena Lab</h2>
-    <p>Sandbox environment for payment flow testing</p>
+<main class="app">
 
-    <button id="login">Login with Pi</button>
-    <button id="u2a" class="secondary" style="display:none;">U2A - Test Payment</button>
-    <button id="a2u" class="secondary" style="display:none;">A2U - Receive Test-Pi</button>
+<div class="badge">🧪 giulexhubtest – TESTNET MODE</div>
 
-    <div id="status">State: inactive</div>
-  </main>
+<h2>giulexhubtest</h2>
+<p>Sandbox environment for U2A & A2U testing</p>
 
-  <script>
-    const loginBtn = document.getElementById("login");
-    const u2aBtn = document.getElementById("u2a");
-    const a2uBtn = document.getElementById("a2u");
-    const statusEl = document.getElementById("status");
+<button id="login">Login with Pi</button>
+<button id="u2a" class="secondary" style="display:none;">U2A – Test Payment</button>
+<button id="a2u" class="secondary" style="display:none;">A2U – Receive Test Pi</button>
 
-    let piUser = null;
+<div id="status">State: inactive</div>
 
-    function onIncompletePayment(payment) {
-      console.log("Incomplete payment", payment);
-      statusEl.textContent = `Incomplete payment found:\n${JSON.stringify(payment)}`;
-    }
+</main>
 
-    loginBtn.onclick = async () => {
-      try {
-        statusEl.textContent = "Authenticating...";
-        const auth = await Pi.authenticate(
-          ["username", "payments", "wallet_address"],
-          onIncompletePayment
-        );
+<script>
 
-        piUser = auth.user;
-        statusEl.textContent = `Logged in as: ${piUser.username}`;
-        loginBtn.style.display = "none";
-        u2aBtn.style.display = "block";
-        a2uBtn.style.display = "block";
-        
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = `Authentication error`;
-      }
-    };
+const loginBtn = document.getElementById("login");
+const u2aBtn = document.getElementById("u2a");
+const a2uBtn = document.getElementById("a2u");
+const statusEl = document.getElementById("status");
 
-    u2aBtn.onclick = async () => {
-      statusEl.textContent = "Creating U2A test payment...";
-      try {
-        await Pi.createPayment(
-          {
-            amount: 1,
-            memo: "Arena Lab – Test Payment",
-            metadata: { type: "U2A" },
-          },
-          {
-            onReadyForServerApproval: async (paymentId) => {
-              statusEl.textContent = `Approving payment: ${paymentId}`;
-              await fetch("/api/pi-payment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: "approve", paymentId }),
-              });
-            },
-            onReadyForServerCompletion: async (paymentId, txid) => {
-              statusEl.textContent = `Completing payment: ${paymentId} (txid: ${txid})`;
-              await fetch("/api/pi-payment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: "complete", paymentId, txid }),
-              });
-              statusEl.textContent = `U2A completed ✔️`;
-            },
-          }
-        );
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = "U2A failed ❌";
-      }
-    };
+let piUser = null;
 
-    a2uBtn.onclick = async () => {
-      statusEl.textContent = "Requesting A2U test creation...";
-      try {
-        const r = await fetch("/api/a2u", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uid: piUser.uid, amount: 1 }),
-        });
+function onIncompletePaymentFound(payment) {
+  console.log("Incomplete payment", payment);
+  statusEl.textContent =
+    "Incomplete payment found:\n" + JSON.stringify(payment, null, 2);
+}
 
-        const data = await r.json();
-        if (!data.success) {
-          statusEl.textContent = "Error creating A2U test";
-          return;
-        }
+// 🔐 AUTH
+loginBtn.onclick = async () => {
+  try {
+    statusEl.textContent = "Authenticating...";
+    const auth = await Pi.authenticate(
+      ["username", "payments", "wallet_address"],
+      onIncompletePaymentFound
+    );
 
-        const paymentId = data.paymentId;
-        statusEl.textContent = `A2U created. Waiting for on-chain sign...`;
+    piUser = auth.user;
 
-        const interval = setInterval(async () => {
-          const check = await fetch("/api/check-payment", {
+    statusEl.textContent = "Logged in as: " + piUser.username;
+
+    loginBtn.style.display = "none";
+    u2aBtn.style.display = "block";
+    a2uBtn.style.display = "block";
+
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "Authentication error";
+  }
+};
+
+// 💸 U2A TEST
+u2aBtn.onclick = async () => {
+
+  statusEl.textContent = "Creating U2A test payment...";
+
+  try {
+    await Pi.createPayment(
+      {
+        amount: 1,
+        memo: "giulexhubtest U2A",
+        metadata: { type: "U2A_TEST" }
+      },
+      {
+        onReadyForServerApproval: async (paymentId) => {
+          statusEl.textContent = "Approving: " + paymentId;
+
+          await fetch("/api/pi-payment", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentId }),
+            body: JSON.stringify({
+              action: "approve",
+              paymentId
+            })
+          });
+        },
+
+        onReadyForServerCompletion: async (paymentId, txid) => {
+          statusEl.textContent =
+            "Completing: " + paymentId + " txid: " + txid;
+
+          await fetch("/api/pi-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "complete",
+              paymentId,
+              txid
+            })
           });
 
-          const result = await check.json();
+          statusEl.textContent = "U2A completed ✅";
+        },
 
-          if (result.transaction_verified) {
-            clearInterval(interval);
+        onCancel: (paymentId) => {
+          statusEl.textContent = "Payment cancelled";
+        },
 
-            await fetch("/api/pi-payment", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "complete", paymentId, txid: result.txid }),
-            });
-
-            statusEl.textContent = "A2U completed ✔️";
-          }
-        }, 3000);
-
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = "A2U failed ❌";
+        onError: (error) => {
+          console.error(error);
+          statusEl.textContent = "U2A failed ❌";
+        }
       }
-    };
-  </script>
+    );
 
-<div style="text-align:center;margin-top:30px;font-size:14px;">
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "U2A failed ❌";
+  }
+};
+
+// 💰 A2U TEST
+a2uBtn.onclick = async () => {
+
+  statusEl.textContent = "Requesting A2U test...";
+
+  try {
+    const r = await fetch("/api/a2u", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uid: piUser.uid,
+        amount: 1
+      })
+    });
+
+    const data = await r.json();
+
+    if (!data.success) {
+      statusEl.textContent = "A2U error";
+      return;
+    }
+
+    statusEl.textContent = "A2U created. Waiting for blockchain...";
+
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "A2U failed ❌";
+  }
+};
+
+</script>
+
+<div class="links">
   <a href="/privacy.html" target="_blank">Privacy Policy</a> |
   <a href="/terms.html" target="_blank">Terms of Service</a>
 </div>
