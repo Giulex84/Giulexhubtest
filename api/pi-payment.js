@@ -24,6 +24,9 @@ export default async function handler(req, res) {
   if (action === "approve") {
     url = `${BASE_URL}/${paymentId}/approve`;
   }
+if (action === "complete" && !txid) {
+  return res.status(400).json({ error: "Missing txid" });
+}
 
   if (action === "complete") {
     url = `${BASE_URL}/${paymentId}/complete`;
