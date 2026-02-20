@@ -15,7 +15,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "PI_API_KEY not set" });
   }
 
-  // ⚠️ TESTNET ENDPOINT (giulexhub test)
   const BASE_URL = "https://api.minepi.com/v2/payments";
 
   let url = "";
@@ -24,11 +23,12 @@ export default async function handler(req, res) {
   if (action === "approve") {
     url = `${BASE_URL}/${paymentId}/approve`;
   }
-if (action === "complete" && !txid) {
-  return res.status(400).json({ error: "Missing txid" });
-}
 
   if (action === "complete") {
+    if (!txid) {
+      return res.status(400).json({ error: "Missing txid" });
+    }
+
     url = `${BASE_URL}/${paymentId}/complete`;
     payload = { txid };
   }
@@ -48,12 +48,10 @@ if (action === "complete" && !txid) {
     });
 
     const data = await response.json();
-
-    console.log("PI TEST RESPONSE:", data);
-
     return res.status(response.status).json(data);
+
   } catch (error) {
-    console.error("PI TEST ERROR:", error);
+    console.error("PI PAYMENT ERROR:", error);
     return res.status(500).json({ error: "Server error" });
   }
 }
