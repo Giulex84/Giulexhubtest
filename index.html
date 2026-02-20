@@ -66,64 +66,66 @@
   </main>
 
   <script>
-    const loginBtn = document.getElementById("login");
-    const a2uBtn = document.getElementById("a2u");
-    const statusEl = document.getElementById("status");
+  const loginBtn = document.getElementById("login");
+  const a2uBtn = document.getElementById("a2u");
+  const statusEl = document.getElementById("status");
 
-    let piUser = null;
+  let piUser = null;
 
-    // 🔐 LOGIN
-    loginBtn.onclick = async () => {
-      try {
-        statusEl.textContent = "Authenticating...";
+  loginBtn.onclick = async () => {
+    try {
+      statusEl.textContent = "Authenticating...";
 
-        const auth = await Pi.authenticate(
-          ["username", "wallet_address"]
-        );
+      const auth = await Pi.authenticate(
+        ["username", "wallet_address"]
+      );
 
-        piUser = auth.user;
+      piUser = auth.user;
 
-        statusEl.textContent = `Logged in as: ${piUser.username}`;
-        loginBtn.style.display = "none";
-        a2uBtn.style.display = "block";
+      statusEl.textContent = `Logged in as: ${piUser.username}`;
+      loginBtn.style.display = "none";
+      a2uBtn.style.display = "block";
 
-      } catch (err) {
-        console.error("AUTH ERROR:", err);
-        statusEl.textContent = "Authentication error ❌";
+    } catch (err) {
+      console.error("AUTH ERROR:", err);
+      statusEl.textContent = "Authentication error ❌";
+    }
+  };
+
+  // 🔥 A2U IDENTICO AL VECCHIO COMPORTAMENTO
+  a2uBtn.onclick = async () => {
+    if (!piUser) {
+      statusEl.textContent = "Login required ❌";
+      return;
+    }
+
+    try {
+      statusEl.textContent = "Requesting A2U payment...";
+
+      const res = await fetch("/api/a2u", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: piUser.uid,
+          amount: 1   // 👈 QUESTO MANCAVA
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        statusEl.textContent =
+          `A2U Success ✅\nPaymentId: ${data.paymentId}`;
+      } else {
+        statusEl.textContent =
+          `A2U Error ❌\n${JSON.stringify(data)}`;
       }
-    };
 
-    // 💸 A2U RECEIVE TEST PI
-    a2uBtn.onclick = async () => {
-      if (!piUser) {
-        statusEl.textContent = "Login required ❌";
-        return;
-      }
-
-      try {
-        statusEl.textContent = "Requesting A2U payment...";
-
-        const res = await fetch("/api/a2u", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uid: piUser.uid
-          })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          statusEl.textContent = `A2U Success ✅\nPaymentId: ${data.paymentId}`;
-        } else {
-          statusEl.textContent = `A2U Error ❌\n${JSON.stringify(data)}`;
-        }
-
-      } catch (err) {
-        console.error("A2U ERROR:", err);
-        statusEl.textContent = "A2U request failed ❌";
-      }
-    };
+    } catch (err) {
+      console.error("A2U ERROR:", err);
+      statusEl.textContent = "A2U request failed ❌";
+    }
+  };
   </script>
 </body>
 </html>
