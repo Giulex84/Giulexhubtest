@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   }
 
   // ⚠️ TESTNET ENDPOINT (giulexhub test)
-  const BASE_URL = "https://api.testnet.minepi.com/v2/payments";
+  const BASE_URL = "https://api.minepi.com/v2/payments";
 
   let url = "";
   let payload = undefined;
