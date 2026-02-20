@@ -132,14 +132,25 @@
               });
             },
             onReadyForServerCompletion: async (paymentId, txid) => {
-              statusEl.textContent = `Completing payment: ${paymentId} (txid: ${txid})`;
-              await fetch("/api/pi-payment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: "complete", paymentId, txid }),
-              });
-              statusEl.textContent = `U2A completed ✔️`;
-            },
+  statusEl.textContent = `Completing payment: ${paymentId}`;
+
+  const res = await fetch("/api/pi-payment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "complete", paymentId, txid }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    statusEl.textContent = "U2A complete failed ❌";
+    console.error("Complete error:", data);
+    return;
+  }
+
+  statusEl.textContent = "U2A completed ✔";
+}
+
           }
         );
       } catch (err) {
