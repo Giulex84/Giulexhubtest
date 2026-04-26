@@ -45,7 +45,8 @@
     loginBtn.onclick = async () => {
       try {
         statusEl.textContent = "Autenticazione...";
-        const auth = await Pi.authenticate(["username", "wallet_address"]);
+        // CORREZIONE: Aggiunto lo scope 'payments' necessario per il tasto arancione
+        const auth = await Pi.authenticate(["username", "payments", "wallet_address"]);
         piUser = auth.user;
         statusEl.textContent = `Benvenuto, ${piUser.username}!`;
         loginBtn.style.display = "none";
@@ -85,7 +86,6 @@
           onCancel: (paymentId) => { statusEl.textContent = "Pagamento annullato."; },
           onError: (error, payment) => { 
             statusEl.textContent = "Errore SDK: " + error.message; 
-            console.error(error);
           },
         });
       } catch (err) {
