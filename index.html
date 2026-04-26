@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <script>
+    // Inizializzazione SDK con sandbox attiva
     Pi.init({ version: "2.0", sandbox: true });
   </script>
   <style>
@@ -32,9 +33,12 @@
     </div>
     <div id="status">Stato: In attesa di login...</div>
   </main>
+
   <footer>
-    <a href="/privacy.html">Privacy Policy</a> | <a href="/terms.html">Terms of Service</a>
+    <a href="/privacy.html">Privacy Policy</a> | 
+    <a href="/terms.html">Terms of Service</a>
   </footer>
+
   <script>
     const loginBtn = document.getElementById("login");
     const paymentSection = document.getElementById("payment-section");
