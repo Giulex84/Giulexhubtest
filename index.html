@@ -7,8 +7,9 @@
 
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <script>
-    // Inizializzazione SDK 2.0 per Testnet
-    Pi.init({ version: "2.0" });
+    // Inizializzazione SDK 2.0 con SANDBOX ATTIVA per Testnet
+    // Senza 'sandbox: true', il login nel Pi Browser fallisce sulle app in dev
+    Pi.init({ version: "2.0", sandbox: true });
   </script>
 
   <style>
@@ -53,8 +54,8 @@
     button:active { transform: scale(0.98); }
 
     #login { background: #5a6cff; color: #fff; }
-    #u2a { background: #ff9f43; color: #fff; } /* Arancione per User-to-App */
-    #a2u { background: #2ecc71; color: #fff; } /* Verde per App-to-User */
+    #u2a { background: #ff9f43; color: #fff; }
+    #a2u { background: #2ecc71; color: #fff; }
 
     #status {
       margin-top: 20px;
@@ -116,10 +117,10 @@
 
     let piUser = null;
 
-    // 1. Logica Autenticazione
     loginBtn.onclick = async () => {
       try {
         statusEl.textContent = "Autenticazione in corso...";
+        // Chiamata all'autenticazione Sandbox
         const auth = await Pi.authenticate(["username", "wallet_address"]);
         piUser = auth.user;
 
@@ -127,17 +128,15 @@
         loginBtn.style.display = "none";
         paymentSection.style.display = "block";
       } catch (err) {
-        statusEl.textContent = "Errore durante l'autenticazione ❌";
+        statusEl.textContent = "Errore: " + (err.message || "Autenticazione Fallita");
         console.error(err);
       }
     };
 
-    // 2. Logica U2A (User-to-App) - ALLINEATA A /api/pi-payment
     u2aBtn.onclick = async () => {
       try {
         statusEl.textContent = "Avvio pagamento U2A...";
-        
-        const payment = await Pi.createPayment({
+        await Pi.createPayment({
           amount: 0.1,
           memo: "Testnet U2A Compliance",
           metadata: { type: "testnet-verification" },
@@ -168,7 +167,6 @@
       }
     };
 
-    // 3. Logica A2U (App-to-User)
     a2uBtn.onclick = async () => {
       try {
         statusEl.textContent = "Richiesta A2U al server...";
@@ -178,7 +176,6 @@
           body: JSON.stringify({ uid: piUser.uid, amount: 1 })
         });
         const data = await res.json();
-
         if (res.ok) {
           statusEl.textContent = `A2U Inviato! ✅\nID: ${data.paymentId}`;
         } else {
