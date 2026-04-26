@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   const { action, paymentId, txid } = req.body;
   const PI_API_KEY = process.env.PI_API_KEY;
 
-  if (!PI_API_KEY) return res.status(500).json({ error: "Chiave API mancante su Vercel" });
+  if (!PI_API_KEY) return res.status(500).json({ error: "API Key mancante" });
 
   const BASE_URL = "https://api.minepi.com/v2/payments";
   let url = "";
@@ -15,8 +15,6 @@ export default async function handler(req, res) {
   } else if (action === "complete") {
     url = `${BASE_URL}/${paymentId}/complete`;
     payload = { txid };
-  } else if (action === "cancel") {
-    url = `${BASE_URL}/${paymentId}/cancel`;
   }
 
   try {
@@ -32,6 +30,6 @@ export default async function handler(req, res) {
     const data = await response.json();
     return res.status(response.status).json(data);
   } catch (error) {
-    return res.status(500).json({ error: "Server Error", details: error.message });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 }
