@@ -1,33 +1,35 @@
 export default async function handler(req, res) {
+  // Accettiamo solo richieste POST dall'SDK
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { action, paymentId, txid } = req.body;
 
+  // Verifica parametri minimi
   if (!action || !paymentId) {
-    return res.status(400).json({ error: "Missing parameters" });
+    return res.status(400).json({ error: "Missing action or paymentId" });
   }
 
-  // IMPORTANTE: Assicurati che su Vercel la variabile PI_API_KEY 
-  // sia quella generata dalla Dashboard per la TESTNET
   const PI_API_KEY = process.env.PI_API_KEY;
 
   if (!PI_API_KEY) {
-    return res.status(500).json({ error: "PI_API_KEY not set" });
+    console.error("ERRORE: PI_API_KEY non configurata su Vercel");
+    return res.status(500).json({ error: "Server configuration error" });
   }
 
-  // CORREZIONE QUI: URL specifico per la Testnet
-  const BASE_URL = "https://api.minepi.com/v2/payments"; 
+  // URL standard per le API di pagamento Pi (valido sia per Testnet che Mainnet)
+  const BASE_URL = "https://api.minepi.com/v2/payments";
 
   let url = "";
-  let payload = undefined;
+  let payload = null;
 
+  // Determina l'endpoint in base all'azione richiesta dall'SDK
   if (action === "approve") {
     url = `${BASE_URL}/${paymentId}/approve`;
   } else if (action === "complete") {
     if (!txid) {
-      return res.status(400).json({ error: "Missing txid" });
+      return res.status(400).json({ error: "Missing txid for completion" });
     }
     url = `${BASE_URL}/${paymentId}/complete`;
     payload = { txid };
@@ -41,24 +43,23 @@ export default async function handler(req, res) {
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Key ${PI_API_KEY}`,
+        "Authorization": `Key ${PI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: payload ? JSON.stringify(payload) : undefined,
     });
 
-    // Gestione errori dalla risposta dell'API di Pi
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("PI API ERROR DETAILS:", errorData);
-      return res.status(response.status).json(errorData);
+      console.error("PI API ERROR:", data);
+      return res.status(response.status).json(data);
     }
 
-    const data = await response.json();
     return res.status(200).json(data);
 
   } catch (error) {
-    console.error("PI PAYMENT SERVER ERROR:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    console.error("PAYMENT SYSTEM ERROR:", error);
+    return res.status(500).json({ error: "Internal server error during payment" });
   }
 }
