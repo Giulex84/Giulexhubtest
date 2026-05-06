@@ -2,30 +2,30 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <title>Testing Idle - Testnet</title>
+  <title>Giulex Hub Test - Testnet</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <script>
-    // Inizializzazione SDK Testing Idle
+    // Inizializzazione SDK con sandbox attiva
     Pi.init({ version: "2.0", sandbox: true });
   </script>
   <style>
-    body { margin: 0; min-height: 100vh; font-family: sans-serif; background: #0d0d14; color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-    .app { width: 90%; max-width: 420px; background: #1a1a2e; padding: 30px; border-radius: 20px; border: 1px solid #4a4e69; text-align: center; }
-    button { width: 100%; border-radius: 12px; padding: 14px; cursor: pointer; font-weight: 600; margin-top: 15px; border: none; transition: background 0.2s; }
+    body { margin: 0; min-height: 100vh; font-family: sans-serif; background: #10101a; color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .app { width: 90%; max-width: 420px; background: #17172a; padding: 30px; border-radius: 20px; border: 1px solid #3a3f58; text-align: center; }
+    button { width: 100%; border-radius: 12px; padding: 14px; cursor: pointer; font-weight: 600; margin-top: 15px; border: none; transition: opacity 0.2s; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
-    #login { background: #6c5ce7; color: #fff; }
-    #u2a { background: #e17055; color: #fff; }
-    #a2u { background: #00b894; color: #fff; }
-    #status { margin-top: 20px; padding: 15px; border-radius: 10px; background: #000; font-family: monospace; font-size: 0.85rem; color: #55efc4; white-space: pre-wrap; word-break: break-all; border: 1px solid #333; }
+    #login { background: #5a6cff; color: #fff; }
+    #u2a { background: #ff9f43; color: #fff; }
+    #a2u { background: #2ecc71; color: #fff; }
+    #status { margin-top: 20px; padding: 15px; border-radius: 10px; background: #0f0f1d; font-family: monospace; font-size: 0.85rem; color: #00ff00; white-space: pre-wrap; word-break: break-all; border: 1px solid #222; }
     footer { margin-top: 30px; font-size: 0.8rem; opacity: 0.7; }
-    footer a { color: #6c5ce7; text-decoration: none; margin: 0 10px; }
+    footer a { color: #5a6cff; text-decoration: none; margin: 0 10px; }
   </style>
 </head>
 <body>
   <main class="app">
-    <h2>Testing Idle</h2>
-    <p>Compliance Mode: Testnet (Beta)</p>
+    <h2>Giulex Hub Test</h2>
+    <p>Compliance Mode: Testnet</p>
     <button id="login">Accedi con Pi Browser</button>
     <div id="payment-section" style="display:none;">
       <button id="u2a">Paga 0.1 Test-Pi (U2A)</button>
@@ -49,10 +49,10 @@
 
     loginBtn.onclick = async () => {
       try {
-        statusEl.textContent = "Autenticazione in corso...";
+        statusEl.textContent = "Autenticazione...";
         const auth = await Pi.authenticate(["username", "payments", "wallet_address"]);
         piUser = auth.user;
-        statusEl.textContent = `Benvenuto, ${piUser.username}!\nTesting Idle pronto.`;
+        statusEl.textContent = `Benvenuto, ${piUser.username}!\nPronto per i test.`;
         loginBtn.style.display = "none";
         paymentSection.style.display = "block";
       } catch (err) {
@@ -61,12 +61,12 @@
     };
 
     u2aBtn.onclick = async () => {
-      statusEl.textContent = "Inizializzazione Pagamento U2A...";
+      statusEl.textContent = "Inizializzazione Pagamento...";
       try {
         await Pi.createPayment({
           amount: 0.1,
-          memo: "Testing Idle U2A Compliance",
-          metadata: { type: "testing-idle-verification" },
+          memo: "Testnet U2A Compliance",
+          metadata: { type: "testnet-verification" },
         }, {
           onReadyForServerApproval: async (paymentId) => {
             statusEl.textContent = "Approvazione Server...";
@@ -84,9 +84,9 @@
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ action: "complete", paymentId, txid })
             });
-            statusEl.textContent = "U2A Successo! ✅\nTransazione completata.";
+            statusEl.textContent = "U2A Successo! ✅";
           },
-          onCancel: (paymentId) => { statusEl.textContent = "Pagamento annullato dall'utente."; },
+          onCancel: (paymentId) => { statusEl.textContent = "Pagamento annullato."; },
           onError: (error) => { statusEl.textContent = "Errore SDK: " + error.message; },
         });
       } catch (err) {
@@ -95,7 +95,7 @@
     };
 
     a2uBtn.onclick = async () => {
-      statusEl.textContent = "Richiesta A2U (App-to-User)...";
+      statusEl.textContent = "Richiesta A2U in corso...";
       try {
         const res = await fetch("/api/a2u", {
           method: "POST",
@@ -104,9 +104,7 @@
         });
         const data = await res.json();
         statusEl.textContent = res.ok ? `A2U Successo! ✅\nID: ${data.paymentId}` : `Errore A2U: ${data.error}`;
-      } catch (err) { 
-        statusEl.textContent = "Errore di rete durante A2U."; 
-      }
+      } catch (err) { statusEl.textContent = "Errore di rete A2U."; }
     };
   </script>
 </body>
