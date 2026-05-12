@@ -76,7 +76,6 @@
       cursor: pointer; 
       transition: transform 0.2s, background 0.2s;
     }
-    /* Adattamento font per griglie fitte */
     .small-font { font-size: 1rem !important; }
 
     .card.flipped { background: var(--accent); }
@@ -136,7 +135,7 @@
       <div id="grid" class="grid"></div>
 
       <div id="payment-area">
-        <button id="u2a">SBLOCCA PREMIUM (0.1 Test-π)</button>
+        <button id="u2a">SBLOCCA PREMIUM (1.0 Test-π)</button>
       </div>
     </div>
 
@@ -156,7 +155,6 @@
     let score = 0;
     let level = 1;
     let lives = 5;
-    let maxLivesAtLevelStart = 5;
     let combo = 0;
     let isPremium = false;
 
@@ -165,6 +163,7 @@
     const statusEl = document.getElementById("status");
     const gridEl = document.getElementById("grid");
     const livesContainer = document.getElementById("lives-container");
+    const u2aBtn = document.getElementById("u2a");
 
     loginBtn.onclick = async () => {
       try {
@@ -178,22 +177,64 @@
       } catch (err) { statusEl.textContent = "Errore: " + err.message; }
     };
 
-    function initGame() {
-      // Difficoltà Progressiva fino al livello 10
-      let size;
-      if (level === 1) size = 2; // Tutorial (2x2)
-      else if (level <= 3) size = 4; // Facile (4x4)
-      else if (level <= 6) size = 4; // Medio (Aggiungeremo più simboli)
-      else if (level <= 9) size = 6; // Difficile (6x6)
-      else size = 6; // Livello 10+ (Massima difficoltà)
+    // --- NUOVO SBLOCCO PREMIUM A 1.0 PI ---
+    u2aBtn.onclick = async () => {
+      statusEl.textContent = "Inizializzazione Pagamento 1.0 Pi...";
+      try {
+        await Pi.createPayment({
+          amount: 1.0, // Aumentato a 1 Pi
+          memo: "Arena Premium Unlock - Pro Mode",
+          metadata: { uid: piUser.uid },
+        }, {
+          onReadyForServerApproval: async (paymentId) => {
+            await fetch("/api/pi-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "approve", paymentId })
+            });
+          },
+          onReadyForServerCompletion: async (paymentId, txid) => {
+            await fetch("/api/pi-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "complete", paymentId, txid })
+            });
+            isPremium = true;
+            u2aBtn.parentElement.innerHTML = "<b style='color:#ffa502'>🏆 ACCOUNT PREMIUM ATTIVO</b>";
+            updateStats();
+          },
+          onCancel: () => { statusEl.textContent = "Annullato."; },
+          onError: (error) => { statusEl.textContent = "Errore: " + error.message; },
+        });
+      } catch (err) { statusEl.textContent = "Errore: " + err.message; }
+    };
 
-      // Aumento progressivo delle vite iniziali (Max 10)
-      maxLivesAtLevelStart = Math.min(5 + (level - 1), 10);
+    // --- FUNZIONE REWARD A2U (0.3 PI OGNI 3 COMBO) ---
+    async function claimComboReward() {
+      statusEl.textContent = "🎁 TRIPLE COMBO! Invio 0.3 Pi...";
+      try {
+        const res = await fetch("/api/a2u", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid: piUser.uid, amount: 0.3 })
+        });
+        if (res.ok) {
+          statusEl.textContent = "Premio 0.3 Pi inviato con successo! ✅";
+        } else {
+          statusEl.textContent = "Errore durante l'invio del premio.";
+        }
+      } catch (err) {
+        statusEl.textContent = "Errore di rete durante il Reward.";
+      }
+    }
+
+    function initGame() {
+      let size = level === 1 ? 2 : (level <= 3 ? 4 : (level <= 9 ? 6 : 6));
+      let maxLivesAtLevelStart = Math.min(5 + (level - 1), 10);
       if (!isPremium) lives = maxLivesAtLevelStart;
 
       const totalCards = size * size;
       const pairCount = totalCards / 2;
-      
       let gameSymbols = symbols.slice(0, pairCount);
       let doubled = [...gameSymbols, ...gameSymbols].sort(() => Math.random() - 0.5);
 
@@ -215,14 +256,11 @@
     }
 
     function handleFlip(card, el) {
-      if (card.flipped || card.matched || selected.length === 2) return;
-      if (!isPremium && lives <= 0) return;
-
+      if (card.flipped || card.matched || selected.length === 2 || (!isPremium && lives <= 0)) return;
       card.flipped = true;
       el.classList.add("flipped");
       el.textContent = card.value;
       selected.push({ card, el });
-
       if (selected.length === 2) setTimeout(checkMatch, 500);
     }
 
@@ -232,19 +270,20 @@
         a.card.matched = b.card.matched = true;
         combo++;
         
-        // --- NUOVA LOGICA: RECUPERO VITA ---
-        if (!isPremium && lives < 10) {
-          lives++;
-          triggerHealEffect();
+        // RECUPERO VITA
+        if (!isPremium && lives < 10) { lives++; triggerHealEffect(); }
+
+        // --- CONTROLLO REWARD: OGNI 3 COMBO DI FILA ---
+        if (combo === 3) {
+          claimComboReward();
         }
 
         score += (isPremium ? 20 : 10) * combo;
-        if(combo > 1) document.getElementById("combo-box").textContent = `COMBO X${combo}! (+1 Vita)`;
-        else document.getElementById("combo-box").textContent = `OTTIMO! (+1 Vita)`;
+        document.getElementById("combo-box").textContent = combo >= 3 ? `🔥 TRIPLE COMBO! REWARD INVIATO!` : `COMBO X${combo}!`;
         
         if (cards.every(c => c.matched)) {
           level++;
-          statusEl.textContent = "LIVELLO SUPERATO! +1 Difficoltà";
+          statusEl.textContent = "LIVELLO SUPERATO!";
           setTimeout(initGame, 1000);
         }
       } else {
@@ -274,17 +313,8 @@
       document.getElementById("lvl").textContent = level;
       document.getElementById("lives").textContent = isPremium ? "∞" : lives;
       document.getElementById("score").textContent = score;
-      if (lives <= 0 && !isPremium) {
-        statusEl.textContent = "GAME OVER! Usa Premium per vite infinite.";
-      }
+      if (lives <= 0 && !isPremium) statusEl.textContent = "GAME OVER!";
     }
-
-    // (Logica Pagamento u2aBtn.onclick rimane uguale a quella precedente)
-    document.getElementById("u2a").onclick = async () => {
-      // ... logica Pi.createPayment come sopra ...
-      isPremium = true;
-      updateStats();
-    };
   </script>
 </body>
 </html>
