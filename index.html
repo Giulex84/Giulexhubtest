@@ -2,84 +2,203 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <title>Giulex Hub Test - Arena Logic</title>
+  <title>Giulex Hub Arena - Testnet Pro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <script>
+    // Inizializzazione SDK con sandbox attiva per Testnet
     Pi.init({ version: "2.0", sandbox: true });
   </script>
   <style>
-    body { margin: 0; min-height: 100vh; font-family: sans-serif; background: #10101a; color: #fff; display: flex; flex-direction: column; align-items: center; padding-top: 20px; }
-    .app { width: 90%; max-width: 420px; background: #17172a; padding: 20px; border-radius: 20px; border: 1px solid #3a3f58; text-align: center; }
-    
-    /* Stili Arena estratti da Mainnet */
-    #game-container { display: none; margin-top: 20px; }
-    .grid { display: grid; gap: 8px; margin: 20px auto; max-width: 300px; }
-    .card { aspect-ratio: 1; background: #1a1a1a; border: 2px solid #b30000; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; transition: transform 0.2s; }
-    .card.flipped { background: #b30000; }
+    :root {
+      --bg: #0f0f1a;
+      --card-bg: #17172a;
+      --primary: #5a6cff;
+      --accent: #ff4757;
+      --gold: #ffa502;
+      --text: #ffffff;
+    }
 
-    button { width: 100%; border-radius: 12px; padding: 14px; cursor: pointer; font-weight: 600; margin-top: 15px; border: none; transition: opacity 0.2s; }
-    #login { background: #5a6cff; color: #fff; }
-    #u2a { background: #ff9f43; color: #fff; }
-    #status { margin-top: 20px; padding: 10px; border-radius: 10px; background: #0f0f1d; font-family: monospace; font-size: 0.75rem; color: #00ff00; border: 1px solid #222; }
+    body { 
+      margin: 0; 
+      min-height: 100vh; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: var(--bg); 
+      color: var(--text); 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+    }
+
+    .app { 
+      width: 95%; 
+      max-width: 450px; 
+      background: var(--card-bg); 
+      padding: 25px; 
+      margin-top: 20px;
+      border-radius: 24px; 
+      border: 1px solid #3a3f58; 
+      text-align: center; 
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    h2 { margin: 0 0 10px 0; letter-spacing: 2px; color: var(--accent); }
+
+    /* Stats Bar */
+    .stats-bar { 
+      display: flex; 
+      justify-content: space-around; 
+      background: rgba(0,0,0,0.3); 
+      padding: 12px; 
+      border-radius: 12px; 
+      margin-bottom: 15px;
+      font-weight: bold;
+      font-family: monospace;
+    }
+    .lives { color: var(--accent); }
+    .combo-text { color: var(--gold); height: 20px; font-size: 0.9rem; margin-bottom: 10px; font-weight: bold; }
+
+    /* Grid & Cards */
+    .grid { 
+      display: grid; 
+      gap: 10px; 
+      margin: 0 auto 20px auto; 
+      perspective: 1000px;
+    }
+    .card { 
+      aspect-ratio: 1; 
+      background: #1a1a2e; 
+      border: 2px solid var(--accent); 
+      border-radius: 10px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 1.8rem; 
+      cursor: pointer; 
+      transition: transform 0.3s, background 0.3s;
+    }
+    .card.flipped { 
+      background: var(--accent); 
+      transform: rotateY(180deg);
+    }
+
+    /* Buttons */
+    button { 
+      width: 100%; 
+      border-radius: 12px; 
+      padding: 15px; 
+      cursor: pointer; 
+      font-weight: 700; 
+      margin-top: 10px; 
+      border: none; 
+      transition: all 0.2s; 
+      text-transform: uppercase;
+    }
+    #login { background: var(--primary); color: #fff; }
+    #u2a { background: var(--gold); color: #000; box-shadow: 0 4px 15px rgba(255, 165, 2, 0.3); }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Status & Footer */
+    #status { 
+      margin-top: 20px; 
+      padding: 12px; 
+      border-radius: 10px; 
+      background: #000; 
+      font-family: monospace; 
+      font-size: 0.8rem; 
+      color: #00ff00; 
+      border: 1px solid #222;
+      word-break: break-all;
+    }
+
+    footer { margin: 30px 0; font-size: 0.85rem; opacity: 0.7; }
+    footer a { color: var(--primary); text-decoration: none; margin: 0 10px; }
+
+    /* Animations */
+    .shake { animation: shake 0.4s; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
   </style>
 </head>
 <body>
-  <main class="app">
-    <h2>⚔ ARENA TESTNET ⚔</h2>
-    <div id="user-info"></div>
-    
-    <button id="login">Accedi con Pi Browser</button>
 
-    <div id="game-container">
-      <p id="stats">Livello: 1 | Punti: 0</p>
+  <main class="app">
+    <h2>⚔ ARENA PRO ⚔</h2>
+    <div id="user-display" style="font-size: 0.9rem; margin-bottom: 15px; opacity: 0.8;">Accedi per giocare</div>
+    
+    <button id="login">ACCEDI CON PI BROWSER</button>
+
+    <div id="game-ui" style="display: none;">
+      <div class="stats-bar">
+        <span>LVL: <span id="lvl">1</span></span>
+        <span class="lives">VITE: <span id="lives">5</span></span>
+        <span>PTS: <span id="score">0</span></span>
+      </div>
+      
+      <div id="combo-box" class="combo-text"></div>
+      
       <div id="grid" class="grid"></div>
-      <button id="u2a">Sblocca Bonus Premium (0.1 Test-Pi)</button>
+
+      <div id="payment-area">
+        <button id="u2a">SBLOCCA PREMIUM (0.1 Test-π)</button>
+        <p style="font-size: 0.7rem; margin-top: 8px; opacity: 0.6;">Vite infinite e punti raddoppiati</p>
+      </div>
     </div>
 
     <div id="status">Stato: In attesa di login...</div>
   </main>
 
+  <footer>
+    <a href="/privacy.html">Privacy Policy</a> | 
+    <a href="/terms.html">Terms of Service</a>
+  </footer>
+
   <script>
-    // --- CONFIGURAZIONE E VARIABILI DI STATO ---
+    // --- CONFIGURAZIONE ---
     const symbols = ["⚔", "🔥", "🛡", "🏹", "👑", "💎", "⚡", "🩸", "🧠", "🐉", "🌑", "☠"];
+    let piUser = null;
     let cards = [];
     let selected = [];
     let score = 0;
     let level = 1;
-    let premium = false;
-    let piUser = null;
+    let lives = 5;
+    let combo = 0;
+    let isPremium = false;
 
-    // Elementi DOM
     const loginBtn = document.getElementById("login");
-    const gameContainer = document.getElementById("game-container");
-    const gridEl = document.getElementById("grid");
-    const statsEl = document.getElementById("stats");
+    const gameUI = document.getElementById("game-ui");
     const statusEl = document.getElementById("status");
+    const gridEl = document.getElementById("grid");
     const u2aBtn = document.getElementById("u2a");
 
-    // --- LOGICA PI SDK (Tua originale) ---
+    // --- PI SDK LOGIC ---
     loginBtn.onclick = async () => {
       try {
         statusEl.textContent = "Autenticazione...";
         const auth = await Pi.authenticate(["username", "payments", "wallet_address"]);
         piUser = auth.user;
-        document.getElementById("user-info").textContent = `👤 ${piUser.username}`;
-        statusEl.textContent = "Login effettuato!";
+        
+        document.getElementById("user-display").textContent = `Benvenuto, ${piUser.username}!`;
         loginBtn.style.display = "none";
-        gameContainer.style.display = "block";
-        initGame(); // Avvia il gioco dopo il login
+        gameUI.style.display = "block";
+        statusEl.textContent = "Sessione attiva (Testnet)";
+        
+        initGame();
       } catch (err) {
         statusEl.textContent = "Errore Login: " + err.message;
       }
     };
 
     u2aBtn.onclick = async () => {
-      statusEl.textContent = "Inizializzazione Pagamento...";
+      statusEl.textContent = "Elaborazione pagamento...";
       try {
         await Pi.createPayment({
           amount: 0.1,
-          memo: "Arena Premium Unlock",
+          memo: "Arena Premium Unlock - Testnet",
           metadata: { uid: piUser.uid },
         }, {
           onReadyForServerApproval: async (paymentId) => {
@@ -95,39 +214,45 @@
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ action: "complete", paymentId, txid })
             });
-            premium = true;
-            u2aBtn.style.display = "none";
-            statusEl.textContent = "Premium Attivato! ✅ Punti raddoppiati.";
+            activatePremium();
           },
           onCancel: () => { statusEl.textContent = "Pagamento annullato."; },
-          onError: (error) => { statusEl.textContent = "Errore SDK: " + error.message; },
+          onError: (error) => { statusEl.textContent = "Errore: " + error.message; },
         });
-      } catch (err) { statusEl.textContent = "Errore: " + err.message; }
+      } catch (err) {
+        statusEl.textContent = "Errore critico: " + err.message;
+      }
     };
 
-    // --- LOGICA DI GIOCO (Estrapolata da Arena Mainnet) ---
+    function activatePremium() {
+      isPremium = true;
+      lives = "∞";
+      u2aBtn.parentElement.innerHTML = "<b style='color:#ffa502'>🏆 ACCOUNT PREMIUM ATTIVO</b>";
+      statusEl.textContent = "Premium Sbloccato! ✅";
+      updateStats();
+    }
+
+    // --- GAME LOGIC ---
     function initGame() {
-      const size = (premium || level <= 3) ? 4 : (level <= 6 ? 5 : 6);
-      // Nota: Per semplicità in JS Vanilla usiamo sempre griglie pari
-      const totalCards = size * size;
-      const pairCount = Math.floor(totalCards / 2);
+      // Difficoltà progressiva
+      const size = level <= 2 ? 4 : (level <= 5 ? 4 : 6);
+      const pairCount = (size * size) / 2;
       
       let gameSymbols = symbols.slice(0, pairCount);
-      let doubled = [...gameSymbols, ...gameSymbols];
-      doubled.sort(() => Math.random() - 0.5);
+      let doubled = [...gameSymbols, ...gameSymbols].sort(() => Math.random() - 0.5);
 
       gridEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
       gridEl.innerHTML = "";
       cards = [];
       selected = [];
+      updateStats();
 
       doubled.forEach((sym, index) => {
         const cardObj = { id: index, value: sym, flipped: false, matched: false };
         cards.push(cardObj);
 
         const cardEl = document.createElement("div");
-        cardEl.classList.add("card");
-        cardEl.dataset.id = index;
+        cardEl.className = "card";
         cardEl.onclick = () => handleFlip(cardObj, cardEl);
         gridEl.appendChild(cardEl);
       });
@@ -135,6 +260,10 @@
 
     function handleFlip(card, el) {
       if (card.flipped || card.matched || selected.length === 2) return;
+      if (!isPremium && lives <= 0) {
+        statusEl.textContent = "Vite esaurite! Sblocca Premium.";
+        return;
+      }
 
       card.flipped = true;
       el.classList.add("flipped");
@@ -142,32 +271,53 @@
       selected.push({ card, el });
 
       if (selected.length === 2) {
-        setTimeout(checkMatch, 600);
+        setTimeout(checkMatch, 500);
       }
     }
 
     function checkMatch() {
       const [a, b] = selected;
+
       if (a.card.value === b.card.value) {
-        a.card.matched = true;
-        b.card.matched = true;
-        score += premium ? 20 : 10;
+        // SUCCESS
+        a.card.matched = b.card.matched = true;
+        combo++;
+        score += (isPremium ? 20 : 10) * combo;
+        if(combo > 1) document.getElementById("combo-box").textContent = `COMBO X${combo}!`;
         
         if (cards.every(c => c.matched)) {
           level++;
-          statusEl.textContent = "Livello Completato! Caricamento...";
-          setTimeout(initGame, 1000);
+          statusEl.textContent = "Livello completato! Caricamento...";
+          setTimeout(initGame, 1200);
         }
       } else {
-        a.card.flipped = false;
-        b.card.flipped = false;
-        a.el.classList.remove("flipped");
-        b.el.classList.remove("flipped");
-        a.el.textContent = "";
-        b.el.textContent = "";
+        // FAIL
+        combo = 0;
+        document.getElementById("combo-box").textContent = "";
+        
+        if (!isPremium) {
+          lives--;
+          gridEl.classList.add("shake");
+          setTimeout(() => gridEl.classList.remove("shake"), 400);
+        }
+
+        setTimeout(() => {
+          a.el.classList.remove("flipped");
+          b.el.classList.remove("flipped");
+          a.el.textContent = "";
+          b.el.textContent = "";
+          a.card.flipped = b.card.flipped = false;
+        }, 400);
       }
+      
+      updateStats();
       selected = [];
-      statsEl.textContent = `Livello: ${level} | Punti: ${score}`;
+    }
+
+    function updateStats() {
+      document.getElementById("lvl").textContent = level;
+      document.getElementById("lives").textContent = isPremium ? "∞" : lives;
+      document.getElementById("score").textContent = score;
     }
   </script>
 </body>
