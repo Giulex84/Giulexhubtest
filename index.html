@@ -18,101 +18,25 @@
       --heal: #2ecc71;
       --text: #ffffff;
     }
-
-    body { 
-      margin: 0; 
-      min-height: 100vh; 
-      font-family: 'Segoe UI', sans-serif; 
-      background: var(--bg); 
-      color: var(--text); 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-    }
-
-    .app { 
-      width: 95%; 
-      max-width: 450px; 
-      background: var(--card-bg); 
-      padding: 25px; 
-      margin-top: 20px;
-      border-radius: 24px; 
-      border: 1px solid #3a3f58; 
-      text-align: center; 
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-
+    body { margin: 0; min-height: 100vh; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; }
+    .app { width: 95%; max-width: 450px; background: var(--card-bg); padding: 25px; margin-top: 20px; border-radius: 24px; border: 1px solid #3a3f58; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     h2 { margin: 0 0 10px 0; letter-spacing: 2px; color: var(--accent); text-shadow: 0 0 10px rgba(255, 71, 87, 0.5); }
-
-    .stats-bar { 
-      display: flex; 
-      justify-content: space-around; 
-      background: rgba(0,0,0,0.3); 
-      padding: 12px; 
-      border-radius: 12px; 
-      margin-bottom: 15px;
-      font-weight: bold;
-      font-family: monospace;
-      border: 1px solid #222;
-    }
+    .stats-bar { display: flex; justify-content: space-around; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; margin-bottom: 15px; font-weight: bold; font-family: monospace; border: 1px solid #222; }
     .lives { color: var(--accent); transition: all 0.3s; }
     .lives.heal { color: var(--heal); transform: scale(1.2); }
     .combo-text { color: var(--gold); height: 20px; font-size: 0.9rem; margin-bottom: 10px; font-weight: bold; }
-
-    .grid { 
-      display: grid; 
-      gap: 8px; 
-      margin: 0 auto 20px auto; 
-    }
-    .card { 
-      aspect-ratio: 1; 
-      background: #1a1a2e; 
-      border: 2px solid var(--accent); 
-      border-radius: 8px; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      font-size: 1.4rem; 
-      cursor: pointer; 
-      transition: transform 0.2s, background 0.2s;
-    }
+    .grid { display: grid; gap: 8px; margin: 0 auto 20px auto; }
+    .card { aspect-ratio: 1; background: #1a1a2e; border: 2px solid var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer; transition: transform 0.2s, background 0.2s; }
     .small-font { font-size: 1rem !important; }
-
     .card.flipped { background: var(--accent); }
-
-    button { 
-      width: 100%; 
-      border-radius: 12px; 
-      padding: 15px; 
-      cursor: pointer; 
-      font-weight: 700; 
-      margin-top: 10px; 
-      border: none; 
-      text-transform: uppercase;
-    }
+    button { width: 100%; border-radius: 12px; padding: 15px; cursor: pointer; font-weight: 700; margin-top: 10px; border: none; text-transform: uppercase; }
     #login { background: var(--primary); color: #fff; }
     #u2a { background: var(--gold); color: #000; box-shadow: 0 4px 15px rgba(255, 165, 2, 0.3); }
-
-    #status { 
-      margin-top: 20px; 
-      padding: 12px; 
-      border-radius: 10px; 
-      background: #000; 
-      font-family: monospace; 
-      font-size: 0.8rem; 
-      color: #00ff00; 
-      border: 1px solid #222;
-    }
-
+    #status { margin-top: 20px; padding: 12px; border-radius: 10px; background: #000; font-family: monospace; font-size: 0.8rem; color: #00ff00; border: 1px solid #222; }
     footer { margin: 30px 0; font-size: 0.85rem; opacity: 0.7; }
     footer a { color: var(--primary); text-decoration: none; margin: 0 10px; }
-
     .shake { animation: shake 0.4s; }
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-6px); }
-      75% { transform: translateX(6px); }
-    }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
   </style>
 </head>
 <body>
@@ -120,7 +44,6 @@
   <main class="app">
     <h2>⚔ ARENA PRO ⚔</h2>
     <div id="user-display" style="font-size: 0.9rem; margin-bottom: 15px; opacity: 0.8;">Accedi per giocare</div>
-    
     <button id="login">ACCEDI CON PI BROWSER</button>
 
     <div id="game-ui" style="display: none;">
@@ -129,46 +52,37 @@
         <span class="lives" id="lives-container">VITE: <span id="lives">5</span></span>
         <span>PTS: <span id="score">0</span></span>
       </div>
-      
       <div id="combo-box" class="combo-text"></div>
-      
       <div id="grid" class="grid"></div>
-
-      <div id="payment-area">
-        <button id="u2a">SBLOCCA PREMIUM (1.0 Test-π)</button>
-      </div>
+      <div id="payment-area"><button id="u2a">SBLOCCA PREMIUM (1.0 Test-π)</button></div>
     </div>
-
-    <div id="status">Stato: In attesa di login...</div>
+    <div id="status">In attesa di login...</div>
   </main>
 
   <footer>
-    <a href="/privacy.html">Privacy Policy</a> | 
-    <a href="/terms.html">Terms of Service</a>
+    <a href="/privacy.html">Privacy Policy</a> | <a href="/terms.html">Terms of Service</a>
   </footer>
 
   <script>
     const symbols = ["⚔", "🔥", "🛡", "🏹", "👑", "💎", "⚡", "🩸", "🧠", "🐉", "🌑", "☠", "🍄", "⭐", "🌪", "🧊", "🌋", "🧿"];
-    let piUser = null;
-    let cards = [];
-    let selected = [];
-    let score = 0;
-    let level = 1;
-    let lives = 5;
-    let combo = 0;
-    let isPremium = false;
+    let piUser = null, cards = [], selected = [], score = 0, level = 1, lives = 5, combo = 0, isPremium = false;
+    const loginBtn = document.getElementById("login"), gameUI = document.getElementById("game-ui"), statusEl = document.getElementById("status"), gridEl = document.getElementById("grid"), livesContainer = document.getElementById("lives-container"), u2aBtn = document.getElementById("u2a");
 
-    const loginBtn = document.getElementById("login");
-    const gameUI = document.getElementById("game-ui");
-    const statusEl = document.getElementById("status");
-    const gridEl = document.getElementById("grid");
-    const livesContainer = document.getElementById("lives-container");
-    const u2aBtn = document.getElementById("u2a");
+    // 1. GESTIONE PAGAMENTI IN SOSPESO (INDISPENSABILE)
+    const onIncompletePaymentFound = async (payment) => {
+      statusEl.textContent = "Recupero pagamento in sospeso...";
+      return await fetch("/api/pi-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "complete", paymentId: payment.identifier, txid: payment.transaction.txid })
+      });
+    };
 
     loginBtn.onclick = async () => {
       try {
         statusEl.textContent = "Autenticazione...";
-        const auth = await Pi.authenticate(["username", "payments", "wallet_address"]);
+        // Passiamo onIncompletePaymentFound qui per sbloccare l'SDK
+        const auth = await Pi.authenticate(["username", "payments", "wallet_address"], onIncompletePaymentFound);
         piUser = auth.user;
         document.getElementById("user-display").textContent = `Eroe: ${piUser.username}`;
         loginBtn.style.display = "none";
@@ -177,136 +91,75 @@
       } catch (err) { statusEl.textContent = "Errore: " + err.message; }
     };
 
-    // --- NUOVO SBLOCCO PREMIUM A 1.0 PI ---
     u2aBtn.onclick = async () => {
-      statusEl.textContent = "Inizializzazione Pagamento 1.0 Pi...";
       try {
         await Pi.createPayment({
-          amount: 1.0, // Aumentato a 1 Pi
-          memo: "Arena Premium Unlock - Pro Mode",
+          amount: 1.0,
+          memo: "Arena Premium Unlock",
           metadata: { uid: piUser.uid },
         }, {
-          onReadyForServerApproval: async (paymentId) => {
-            await fetch("/api/pi-payment", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "approve", paymentId })
-            });
+          onReadyForServerApproval: async (pId) => {
+            await fetch("/api/pi-payment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve", paymentId: pId }) });
           },
-          onReadyForServerCompletion: async (paymentId, txid) => {
-            await fetch("/api/pi-payment", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "complete", paymentId, txid })
-            });
-            isPremium = true;
-            u2aBtn.parentElement.innerHTML = "<b style='color:#ffa502'>🏆 ACCOUNT PREMIUM ATTIVO</b>";
-            updateStats();
+          onReadyForServerCompletion: async (pId, txid) => {
+            await fetch("/api/pi-payment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete", paymentId: pId, txid: txid }) });
+            isPremium = true; updateStats();
+            u2aBtn.parentElement.innerHTML = "<b style='color:var(--gold)'>🏆 PREMIUM ATTIVO</b>";
           },
-          onCancel: () => { statusEl.textContent = "Annullato."; },
-          onError: (error) => { statusEl.textContent = "Errore: " + error.message; },
+          onCancel: (pId) => { statusEl.textContent = "Pagamento annullato."; },
+          onError: (err) => { statusEl.textContent = "Errore: " + err.message; },
         });
       } catch (err) { statusEl.textContent = "Errore: " + err.message; }
     };
 
-    // --- FUNZIONE REWARD A2U (0.3 PI OGNI 3 COMBO) ---
-    async function claimComboReward() {
-      statusEl.textContent = "🎁 TRIPLE COMBO! Invio 0.3 Pi...";
+    async function claimReward() {
       try {
-        const res = await fetch("/api/a2u", {
+        await fetch("/api/a2u", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid: piUser.uid, amount: 0.3 })
         });
-        if (res.ok) {
-          statusEl.textContent = "Premio 0.3 Pi inviato con successo! ✅";
-        } else {
-          statusEl.textContent = "Errore durante l'invio del premio.";
-        }
-      } catch (err) {
-        statusEl.textContent = "Errore di rete durante il Reward.";
-      }
+        statusEl.textContent = "Premio 0.3 Pi inviato! ✅";
+      } catch (e) { console.error(e); }
     }
 
     function initGame() {
-      let size = level === 1 ? 2 : (level <= 3 ? 4 : (level <= 9 ? 6 : 6));
-      let maxLivesAtLevelStart = Math.min(5 + (level - 1), 10);
-      if (!isPremium) lives = maxLivesAtLevelStart;
-
+      let size = level === 1 ? 2 : (level <= 3 ? 4 : 6);
+      if (level > 10) size = 6;
+      if (!isPremium) lives = Math.min(5 + (level - 1), 10);
       const totalCards = size * size;
-      const pairCount = totalCards / 2;
-      let gameSymbols = symbols.slice(0, pairCount);
-      let doubled = [...gameSymbols, ...gameSymbols].sort(() => Math.random() - 0.5);
-
+      let doubled = [...symbols.slice(0, totalCards / 2), ...symbols.slice(0, totalCards / 2)].sort(() => Math.random() - 0.5);
       gridEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-      gridEl.innerHTML = "";
-      cards = [];
-      selected = [];
-      updateStats();
-
-      doubled.forEach((sym, index) => {
-        const cardObj = { id: index, value: sym, flipped: false, matched: false };
-        cards.push(cardObj);
-        const cardEl = document.createElement("div");
-        cardEl.className = "card";
-        if(size > 4) cardEl.classList.add("small-font");
-        cardEl.onclick = () => handleFlip(cardObj, cardEl);
-        gridEl.appendChild(cardEl);
+      gridEl.innerHTML = ""; cards = []; selected = []; updateStats();
+      doubled.forEach((sym, i) => {
+        const c = { id: i, value: sym, flipped: false, matched: false };
+        cards.push(c);
+        const el = document.createElement("div"); el.className = "card"; if(size>4) el.classList.add("small-font");
+        el.onclick = () => {
+          if (c.flipped || c.matched || selected.length === 2 || (!isPremium && lives <= 0)) return;
+          c.flipped = true; el.classList.add("flipped"); el.textContent = c.value;
+          selected.push({ c, el });
+          if (selected.length === 2) setTimeout(checkMatch, 500);
+        };
+        gridEl.appendChild(el);
       });
-    }
-
-    function handleFlip(card, el) {
-      if (card.flipped || card.matched || selected.length === 2 || (!isPremium && lives <= 0)) return;
-      card.flipped = true;
-      el.classList.add("flipped");
-      el.textContent = card.value;
-      selected.push({ card, el });
-      if (selected.length === 2) setTimeout(checkMatch, 500);
     }
 
     function checkMatch() {
       const [a, b] = selected;
-      if (a.card.value === b.card.value) {
-        a.card.matched = b.card.matched = true;
-        combo++;
-        
-        // RECUPERO VITA
-        if (!isPremium && lives < 10) { lives++; triggerHealEffect(); }
-
-        // --- CONTROLLO REWARD: OGNI 3 COMBO DI FILA ---
-        if (combo === 3) {
-          claimComboReward();
-        }
-
+      if (a.c.value === b.c.value) {
+        a.c.matched = b.c.matched = true; combo++;
+        if (!isPremium && lives < 10) { lives++; livesContainer.classList.add("heal"); setTimeout(()=>livesContainer.classList.remove("heal"),500); }
+        if (combo === 3) claimReward();
         score += (isPremium ? 20 : 10) * combo;
-        document.getElementById("combo-box").textContent = combo >= 3 ? `🔥 TRIPLE COMBO! REWARD INVIATO!` : `COMBO X${combo}!`;
-        
-        if (cards.every(c => c.matched)) {
-          level++;
-          statusEl.textContent = "LIVELLO SUPERATO!";
-          setTimeout(initGame, 1000);
-        }
+        document.getElementById("combo-box").textContent = combo >= 3 ? "🔥 TRIPLE COMBO! REWARD 0.3π" : `COMBO X${combo}!`;
+        if (cards.every(c => c.matched)) { level++; setTimeout(initGame, 1000); }
       } else {
-        combo = 0;
-        document.getElementById("combo-box").textContent = "";
-        if (!isPremium) {
-          lives--;
-          gridEl.classList.add("shake");
-          setTimeout(() => gridEl.classList.remove("shake"), 400);
-        }
-        setTimeout(() => {
-          a.el.classList.remove("flipped"); b.el.classList.remove("flipped");
-          a.el.textContent = ""; b.el.textContent = "";
-          a.card.flipped = b.card.flipped = false;
-        }, 400);
+        combo = 0; document.getElementById("combo-box").textContent = "";
+        if (!isPremium) { lives--; gridEl.classList.add("shake"); setTimeout(()=>gridEl.classList.remove("shake"),400); }
+        setTimeout(() => { a.el.classList.remove("flipped"); b.el.classList.remove("flipped"); a.el.textContent = ""; b.el.textContent = ""; a.c.flipped = b.c.flipped = false; }, 400);
       }
-      updateStats();
-      selected = [];
-    }
-
-    function triggerHealEffect() {
-      livesContainer.classList.add("heal");
-      setTimeout(() => livesContainer.classList.remove("heal"), 500);
+      updateStats(); selected = [];
     }
 
     function updateStats() {
