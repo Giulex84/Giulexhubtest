@@ -2,59 +2,73 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <title>Giulex Hub Test - Testnet</title>
+  <title>Giulex Hub Test - Arena Logic</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <script>
-    // Inizializzazione SDK con sandbox attiva
     Pi.init({ version: "2.0", sandbox: true });
   </script>
   <style>
-    body { margin: 0; min-height: 100vh; font-family: sans-serif; background: #10101a; color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-    .app { width: 90%; max-width: 420px; background: #17172a; padding: 30px; border-radius: 20px; border: 1px solid #3a3f58; text-align: center; }
+    body { margin: 0; min-height: 100vh; font-family: sans-serif; background: #10101a; color: #fff; display: flex; flex-direction: column; align-items: center; padding-top: 20px; }
+    .app { width: 90%; max-width: 420px; background: #17172a; padding: 20px; border-radius: 20px; border: 1px solid #3a3f58; text-align: center; }
+    
+    /* Stili Arena estratti da Mainnet */
+    #game-container { display: none; margin-top: 20px; }
+    .grid { display: grid; gap: 8px; margin: 20px auto; max-width: 300px; }
+    .card { aspect-ratio: 1; background: #1a1a1a; border: 2px solid #b30000; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; transition: transform 0.2s; }
+    .card.flipped { background: #b30000; }
+
     button { width: 100%; border-radius: 12px; padding: 14px; cursor: pointer; font-weight: 600; margin-top: 15px; border: none; transition: opacity 0.2s; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
     #login { background: #5a6cff; color: #fff; }
     #u2a { background: #ff9f43; color: #fff; }
-    #a2u { background: #2ecc71; color: #fff; }
-    #status { margin-top: 20px; padding: 15px; border-radius: 10px; background: #0f0f1d; font-family: monospace; font-size: 0.85rem; color: #00ff00; white-space: pre-wrap; word-break: break-all; border: 1px solid #222; }
-    footer { margin-top: 30px; font-size: 0.8rem; opacity: 0.7; }
-    footer a { color: #5a6cff; text-decoration: none; margin: 0 10px; }
+    #status { margin-top: 20px; padding: 10px; border-radius: 10px; background: #0f0f1d; font-family: monospace; font-size: 0.75rem; color: #00ff00; border: 1px solid #222; }
   </style>
 </head>
 <body>
   <main class="app">
-    <h2>Giulex Hub Test</h2>
-    <p>Compliance Mode: Testnet</p>
+    <h2>⚔ ARENA TESTNET ⚔</h2>
+    <div id="user-info"></div>
+    
     <button id="login">Accedi con Pi Browser</button>
-    <div id="payment-section" style="display:none;">
-      <button id="u2a">Paga 0.1 Test-Pi (U2A)</button>
-      <button id="a2u">Ricevi 1.0 Test-Pi (A2U)</button>
+
+    <div id="game-container">
+      <p id="stats">Livello: 1 | Punti: 0</p>
+      <div id="grid" class="grid"></div>
+      <button id="u2a">Sblocca Bonus Premium (0.1 Test-Pi)</button>
     </div>
+
     <div id="status">Stato: In attesa di login...</div>
   </main>
 
-  <footer>
-    <a href="/privacy.html">Privacy Policy</a> | 
-    <a href="/terms.html">Terms of Service</a>
-  </footer>
-
   <script>
-    const loginBtn = document.getElementById("login");
-    const paymentSection = document.getElementById("payment-section");
-    const u2aBtn = document.getElementById("u2a");
-    const a2uBtn = document.getElementById("a2u");
-    const statusEl = document.getElementById("status");
+    // --- CONFIGURAZIONE E VARIABILI DI STATO ---
+    const symbols = ["⚔", "🔥", "🛡", "🏹", "👑", "💎", "⚡", "🩸", "🧠", "🐉", "🌑", "☠"];
+    let cards = [];
+    let selected = [];
+    let score = 0;
+    let level = 1;
+    let premium = false;
     let piUser = null;
 
+    // Elementi DOM
+    const loginBtn = document.getElementById("login");
+    const gameContainer = document.getElementById("game-container");
+    const gridEl = document.getElementById("grid");
+    const statsEl = document.getElementById("stats");
+    const statusEl = document.getElementById("status");
+    const u2aBtn = document.getElementById("u2a");
+
+    // --- LOGICA PI SDK (Tua originale) ---
     loginBtn.onclick = async () => {
       try {
         statusEl.textContent = "Autenticazione...";
         const auth = await Pi.authenticate(["username", "payments", "wallet_address"]);
         piUser = auth.user;
-        statusEl.textContent = `Benvenuto, ${piUser.username}!\nPronto per i test.`;
+        document.getElementById("user-info").textContent = `👤 ${piUser.username}`;
+        statusEl.textContent = "Login effettuato!";
         loginBtn.style.display = "none";
-        paymentSection.style.display = "block";
+        gameContainer.style.display = "block";
+        initGame(); // Avvia il gioco dopo il login
       } catch (err) {
         statusEl.textContent = "Errore Login: " + err.message;
       }
@@ -65,47 +79,96 @@
       try {
         await Pi.createPayment({
           amount: 0.1,
-          memo: "Testnet U2A Compliance",
-          metadata: { type: "testnet-verification" },
+          memo: "Arena Premium Unlock",
+          metadata: { uid: piUser.uid },
         }, {
           onReadyForServerApproval: async (paymentId) => {
-            statusEl.textContent = "Approvazione Server...";
-            const res = await fetch("/api/pi-payment", {
+            await fetch("/api/pi-payment", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ action: "approve", paymentId })
             });
-            if (!res.ok) throw new Error("Approval fallito");
           },
           onReadyForServerCompletion: async (paymentId, txid) => {
-            statusEl.textContent = "Completamento transazione...";
             await fetch("/api/pi-payment", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ action: "complete", paymentId, txid })
             });
-            statusEl.textContent = "U2A Successo! ✅";
+            premium = true;
+            u2aBtn.style.display = "none";
+            statusEl.textContent = "Premium Attivato! ✅ Punti raddoppiati.";
           },
-          onCancel: (paymentId) => { statusEl.textContent = "Pagamento annullato."; },
+          onCancel: () => { statusEl.textContent = "Pagamento annullato."; },
           onError: (error) => { statusEl.textContent = "Errore SDK: " + error.message; },
         });
-      } catch (err) {
-        statusEl.textContent = "Errore Critico: " + err.message;
-      }
+      } catch (err) { statusEl.textContent = "Errore: " + err.message; }
     };
 
-    a2uBtn.onclick = async () => {
-      statusEl.textContent = "Richiesta A2U in corso...";
-      try {
-        const res = await fetch("/api/a2u", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uid: piUser.uid, amount: 1 })
-        });
-        const data = await res.json();
-        statusEl.textContent = res.ok ? `A2U Successo! ✅\nID: ${data.paymentId}` : `Errore A2U: ${data.error}`;
-      } catch (err) { statusEl.textContent = "Errore di rete A2U."; }
-    };
+    // --- LOGICA DI GIOCO (Estrapolata da Arena Mainnet) ---
+    function initGame() {
+      const size = (premium || level <= 3) ? 4 : (level <= 6 ? 5 : 6);
+      // Nota: Per semplicità in JS Vanilla usiamo sempre griglie pari
+      const totalCards = size * size;
+      const pairCount = Math.floor(totalCards / 2);
+      
+      let gameSymbols = symbols.slice(0, pairCount);
+      let doubled = [...gameSymbols, ...gameSymbols];
+      doubled.sort(() => Math.random() - 0.5);
+
+      gridEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+      gridEl.innerHTML = "";
+      cards = [];
+      selected = [];
+
+      doubled.forEach((sym, index) => {
+        const cardObj = { id: index, value: sym, flipped: false, matched: false };
+        cards.push(cardObj);
+
+        const cardEl = document.createElement("div");
+        cardEl.classList.add("card");
+        cardEl.dataset.id = index;
+        cardEl.onclick = () => handleFlip(cardObj, cardEl);
+        gridEl.appendChild(cardEl);
+      });
+    }
+
+    function handleFlip(card, el) {
+      if (card.flipped || card.matched || selected.length === 2) return;
+
+      card.flipped = true;
+      el.classList.add("flipped");
+      el.textContent = card.value;
+      selected.push({ card, el });
+
+      if (selected.length === 2) {
+        setTimeout(checkMatch, 600);
+      }
+    }
+
+    function checkMatch() {
+      const [a, b] = selected;
+      if (a.card.value === b.card.value) {
+        a.card.matched = true;
+        b.card.matched = true;
+        score += premium ? 20 : 10;
+        
+        if (cards.every(c => c.matched)) {
+          level++;
+          statusEl.textContent = "Livello Completato! Caricamento...";
+          setTimeout(initGame, 1000);
+        }
+      } else {
+        a.card.flipped = false;
+        b.card.flipped = false;
+        a.el.classList.remove("flipped");
+        b.el.classList.remove("flipped");
+        a.el.textContent = "";
+        b.el.textContent = "";
+      }
+      selected = [];
+      statsEl.textContent = `Livello: ${level} | Punti: ${score}`;
+    }
   </script>
 </body>
 </html>
