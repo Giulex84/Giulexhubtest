@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Giulex Hub Arena - Testnet Pro</title>
@@ -21,6 +21,7 @@
     body { margin: 0; min-height: 100vh; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; }
     .app { width: 95%; max-width: 450px; background: var(--card-bg); padding: 25px; margin-top: 20px; border-radius: 24px; border: 1px solid #3a3f58; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     h2 { margin: 0 0 10px 0; letter-spacing: 2px; color: var(--accent); text-shadow: 0 0 10px rgba(255, 71, 87, 0.5); }
+    .info-box { background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 0.85rem; line-height: 1.4; border: 1px solid #333; }
     .stats-bar { display: flex; justify-content: space-around; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; margin-bottom: 15px; font-weight: bold; font-family: monospace; border: 1px solid #222; }
     .lives { color: var(--accent); transition: all 0.3s; }
     .lives.heal { color: var(--heal); transform: scale(1.2); }
@@ -43,20 +44,30 @@
 
   <main class="app">
     <h2>⚔ ARENA PRO ⚔</h2>
-    <div id="user-display" style="font-size: 0.9rem; margin-bottom: 15px; opacity: 0.8;">Accedi per giocare</div>
-    <button id="login">ACCEDI CON PI BROWSER</button>
+    <div id="user-display" style="font-size: 0.9rem; margin-bottom: 15px; opacity: 0.8;">Login to enter the Arena</div>
+    
+    <div id="welcome-msg" class="info-box">
+      <strong>How to play:</strong> Match the cards to survive. <br>
+      🔥 <strong>Combo x3:</strong> Earn <strong>0.3 Pi</strong> reward!<br>
+      🏆 <strong>Premium:</strong> Unlock infinite lives and double points for 10 levels.
+    </div>
+
+    <button id="login">LOGIN WITH PI BROWSER</button>
 
     <div id="game-ui" style="display: none;">
       <div class="stats-bar">
         <span>LVL: <span id="lvl">1</span></span>
-        <span class="lives" id="lives-container">VITE: <span id="lives">5</span></span>
+        <span class="lives" id="lives-container">LIVES: <span id="lives">5</span></span>
         <span>PTS: <span id="score">0</span></span>
       </div>
       <div id="combo-box" class="combo-text"></div>
       <div id="grid" class="grid"></div>
-      <div id="payment-area"><button id="u2a">SBLOCCA PREMIUM (1.0 Test-π)</button></div>
+      <div id="payment-area">
+        <button id="u2a">UNLOCK PREMIUM (1.0 Test-π)</button>
+        <p style="font-size: 0.7rem; margin-top: 5px;">Valid for 10 levels</p>
+      </div>
     </div>
-    <div id="status">In attesa di login...</div>
+    <div id="status">Status: Waiting for login...</div>
   </main>
 
   <footer>
@@ -65,12 +76,13 @@
 
   <script>
     const symbols = ["⚔", "🔥", "🛡", "🏹", "👑", "💎", "⚡", "🩸", "🧠", "🐉", "🌑", "☠", "🍄", "⭐", "🌪", "🧊", "🌋", "🧿"];
-    let piUser = null, cards = [], selected = [], score = 0, level = 1, lives = 5, combo = 0, isPremium = false;
-    const loginBtn = document.getElementById("login"), gameUI = document.getElementById("game-ui"), statusEl = document.getElementById("status"), gridEl = document.getElementById("grid"), livesContainer = document.getElementById("lives-container"), u2aBtn = document.getElementById("u2a");
+    let piUser = null, cards = [], selected = [], score = 0, level = 1, lives = 5, combo = 0;
+    let premiumUntil = 0; // Gestione scadenza premium per livelli
 
-    // 1. GESTIONE PAGAMENTI IN SOSPESO (INDISPENSABILE)
+    const loginBtn = document.getElementById("login"), gameUI = document.getElementById("game-ui"), welcomeMsg = document.getElementById("welcome-msg"), statusEl = document.getElementById("status"), gridEl = document.getElementById("grid"), livesContainer = document.getElementById("lives-container"), u2aBtn = document.getElementById("u2a");
+
     const onIncompletePaymentFound = async (payment) => {
-      statusEl.textContent = "Recupero pagamento in sospeso...";
+      statusEl.textContent = "Recovering pending payment...";
       return await fetch("/api/pi-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,22 +92,23 @@
 
     loginBtn.onclick = async () => {
       try {
-        statusEl.textContent = "Autenticazione...";
-        // Passiamo onIncompletePaymentFound qui per sbloccare l'SDK
+        statusEl.textContent = "Authenticating...";
         const auth = await Pi.authenticate(["username", "payments", "wallet_address"], onIncompletePaymentFound);
         piUser = auth.user;
-        document.getElementById("user-display").textContent = `Eroe: ${piUser.username}`;
+        document.getElementById("user-display").textContent = `Hero: ${piUser.username}`;
         loginBtn.style.display = "none";
+        welcomeMsg.style.display = "none";
         gameUI.style.display = "block";
         initGame();
-      } catch (err) { statusEl.textContent = "Errore: " + err.message; }
+      } catch (err) { statusEl.textContent = "Error: " + err.message; }
     };
 
     u2aBtn.onclick = async () => {
+      statusEl.textContent = "Processing 1.0 Pi Payment...";
       try {
         await Pi.createPayment({
           amount: 1.0,
-          memo: "Arena Premium Unlock",
+          memo: "Arena Premium - 10 Levels Unlock",
           metadata: { uid: piUser.uid },
         }, {
           onReadyForServerApproval: async (pId) => {
@@ -103,40 +116,52 @@
           },
           onReadyForServerCompletion: async (pId, txid) => {
             await fetch("/api/pi-payment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete", paymentId: pId, txid: txid }) });
-            isPremium = true; updateStats();
-            u2aBtn.parentElement.innerHTML = "<b style='color:var(--gold)'>🏆 PREMIUM ATTIVO</b>";
+            premiumUntil = level + 10;
+            statusEl.textContent = "Premium Activated! Valid until Level " + premiumUntil;
+            updateStats();
           },
-          onCancel: (pId) => { statusEl.textContent = "Pagamento annullato."; },
-          onError: (err) => { statusEl.textContent = "Errore: " + err.message; },
+          onCancel: () => { statusEl.textContent = "Payment cancelled."; },
+          onError: (err) => { statusEl.textContent = "Error: " + err.message; },
         });
-      } catch (err) { statusEl.textContent = "Errore: " + err.message; }
+      } catch (err) { statusEl.textContent = "Error: " + err.message; }
     };
 
     async function claimReward() {
+      statusEl.textContent = "🎁 TRIPLE COMBO! Sending 0.3 Pi...";
       try {
         await fetch("/api/a2u", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid: piUser.uid, amount: 0.3 })
         });
-        statusEl.textContent = "Premio 0.3 Pi inviato! ✅";
+        statusEl.textContent = "0.3 Pi Reward Sent! ✅";
       } catch (e) { console.error(e); }
     }
 
     function initGame() {
+      const isPremium = level < premiumUntil;
       let size = level === 1 ? 2 : (level <= 3 ? 4 : 6);
       if (level > 10) size = 6;
-      if (!isPremium) lives = Math.min(5 + (level - 1), 10);
+      
+      if (!isPremium) {
+        lives = Math.min(5 + (level - 1), 10);
+        u2aBtn.style.display = "block";
+      } else {
+        u2aBtn.style.display = "none";
+      }
+
       const totalCards = size * size;
       let doubled = [...symbols.slice(0, totalCards / 2), ...symbols.slice(0, totalCards / 2)].sort(() => Math.random() - 0.5);
+      
       gridEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
       gridEl.innerHTML = ""; cards = []; selected = []; updateStats();
+
       doubled.forEach((sym, i) => {
         const c = { id: i, value: sym, flipped: false, matched: false };
         cards.push(c);
         const el = document.createElement("div"); el.className = "card"; if(size>4) el.classList.add("small-font");
         el.onclick = () => {
-          if (c.flipped || c.matched || selected.length === 2 || (!isPremium && lives <= 0)) return;
+          if (c.flipped || c.matched || selected.length === 2 || (level >= premiumUntil && lives <= 0)) return;
           c.flipped = true; el.classList.add("flipped"); el.textContent = c.value;
           selected.push({ c, el });
           if (selected.length === 2) setTimeout(checkMatch, 500);
@@ -146,13 +171,14 @@
     }
 
     function checkMatch() {
+      const isPremium = level < premiumUntil;
       const [a, b] = selected;
       if (a.c.value === b.c.value) {
         a.c.matched = b.c.matched = true; combo++;
         if (!isPremium && lives < 10) { lives++; livesContainer.classList.add("heal"); setTimeout(()=>livesContainer.classList.remove("heal"),500); }
         if (combo === 3) claimReward();
         score += (isPremium ? 20 : 10) * combo;
-        document.getElementById("combo-box").textContent = combo >= 3 ? "🔥 TRIPLE COMBO! REWARD 0.3π" : `COMBO X${combo}!`;
+        document.getElementById("combo-box").textContent = combo >= 3 ? "🔥 TRIPLE COMBO! 0.3π REWARD" : `COMBO X${combo}!`;
         if (cards.every(c => c.matched)) { level++; setTimeout(initGame, 1000); }
       } else {
         combo = 0; document.getElementById("combo-box").textContent = "";
@@ -163,10 +189,11 @@
     }
 
     function updateStats() {
+      const isPremium = level < premiumUntil;
       document.getElementById("lvl").textContent = level;
       document.getElementById("lives").textContent = isPremium ? "∞" : lives;
       document.getElementById("score").textContent = score;
-      if (lives <= 0 && !isPremium) statusEl.textContent = "GAME OVER!";
+      if (!isPremium && lives <= 0) statusEl.textContent = "GAME OVER!";
     }
   </script>
 </body>
