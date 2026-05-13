@@ -1,25 +1,29 @@
-# Giulex Hub Test
+# Giulex Hub Arena Pro (Testnet)
 
-A Pi Network Testnet application designed to demonstrate and verify **User-to-App (U2A)** and **App-to-User (A2U)** payment flows.
+An interactive memory game built for the Pi Network ecosystem to demonstrate advanced **U2A (User-to-App)** and **A2U (App-to-User)** payment flows with game-loop logic.
 
-## 🚀 Overview
-Giulex Hub Test is built to be fully **Pi Compliant**. It serves as a technical benchmark for implementing the Pi SDK v2.0 in a Next.js/Vercel environment.
+## 🚀 Game Overview
+Giulex Hub Arena is a fully **Pi Compliant** application that integrates real-time SDK interactions within a dynamic gameplay experience.
 
-## 🛠 Features
-- **User Authentication**: Secure login via Pi SDK.
-- **U2A Payments**: Users can send 0.1 Test-Pi to the app.
-- **A2U Payments**: The app can send 1.0 Test-Pi to the user.
-- **Compliance Ready**: Includes English Privacy Policy and Terms of Service as per Pi Network requirements.
+## 🎮 Game Mechanics
+- **Dynamic Difficulty**: 10 progressive levels increasing grid size and symbol complexity.
+- **Life System**: Players start with limited lives; matching pairs heals the player (+1 Life).
+- **Premium Unlock**: Users can pay **1.0 Test-Pi** to get infinite lives and double points for 10 levels.
+- **Skill Rewards**: Achieving a **Triple Combo (x3)** triggers an automatic reward of **0.3 Test-Pi** back to the player's wallet.
 
-## 📁 Project Structure
-- `/api/pi-payment.js`: Handles U2A approval and completion.
-- `/api/a2u.js`: Handles server-side Test-Pi transfers to users.
-- `/public/`: Contains `privacy.html` and `terms.html`.
-- `index.html`: Main frontend logic and SDK integration.
+## 🛠 Technical Stack
+- **Frontend**: Vanilla JS + CSS3 (Gaming UI)
+- **Backend**: Next.js / Node.js (Vercel)
+- **SDK**: Pi Network SDK v2.0
+- **Pi-Compliant**: Includes English `privacy.html` and `terms.html`.
 
-## ⚙️ Configuration
-The app requires the following environment variables on Vercel:
+## 📁 API Endpoints
+- `/api/pi-payment.js`: Manages the 1.0 Pi Premium subscription (Approve/Complete).
+- `/api/a2u.js`: Processes the 0.3 Pi rewards for skilled players.
+
+## ⚙️ Setup
+Add the following to your Vercel Environment Variables:
 - `PI_API_KEY`: Your Pi Network Developer Portal API Key (Testnet).
 
 ## ⚖️ Legal
-This app is for testing purposes only. It uses Test-Pi which has no monetary value.
+This application is for demonstration and testing purposes. All currency used is Test-Pi.
