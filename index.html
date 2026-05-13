@@ -9,15 +9,7 @@
     Pi.init({ version: "2.0", sandbox: true });
   </script>
   <style>
-    :root {
-      --bg: #0f0f1a;
-      --card-bg: #17172a;
-      --primary: #5a6cff;
-      --accent: #ff4757;
-      --gold: #ffa502;
-      --heal: #2ecc71;
-      --text: #ffffff;
-    }
+    :root { --bg: #0f0f1a; --card-bg: #17172a; --primary: #5a6cff; --accent: #ff4757; --gold: #ffa502; --heal: #2ecc71; --text: #ffffff; }
     body { margin: 0; min-height: 100vh; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; }
     .app { width: 95%; max-width: 450px; background: var(--card-bg); padding: 25px; margin-top: 20px; border-radius: 24px; border: 1px solid #3a3f58; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     h2 { margin: 0 0 10px 0; letter-spacing: 2px; color: var(--accent); text-shadow: 0 0 10px rgba(255, 71, 87, 0.5); }
@@ -77,6 +69,7 @@
   <script>
     const symbols = ["⚔", "🔥", "🛡", "🏹", "👑", "💎", "⚡", "🩸", "🧠", "🐉", "🌑", "☠", "🍄", "⭐", "🌪", "🧊", "🌋", "🧿"];
     let piUser = null, cards = [], selected = [], score = 0, level = 1, lives = 5, combo = 0, premiumUntil = 0;
+    const statusEl = document.getElementById("status");
 
     const onIncompletePaymentFound = async (payment) => {
       return await fetch("/api/pi-payment", {
@@ -88,17 +81,22 @@
 
     document.getElementById("login").onclick = async () => {
       try {
+        statusEl.textContent = "Status: Authenticating...";
         const auth = await Pi.authenticate(["username", "payments", "wallet_address"], onIncompletePaymentFound);
         piUser = auth.user;
         document.getElementById("user-display").textContent = `Hero: ${piUser.username}`;
         document.getElementById("login").style.display = "none";
         document.getElementById("welcome-msg").style.display = "none";
         document.getElementById("game-ui").style.display = "block";
+        statusEl.textContent = "Status: Online"; // Sostituisce "Waiting for login"
         initGame();
-      } catch (err) { document.getElementById("status").textContent = "Error: " + err.message; }
+      } catch (err) { statusEl.textContent = "Error: " + err.message; }
     };
 
+    // Corretto: La funzione di pagamento ora gestisce meglio i messaggi di stato
     document.getElementById("u2a").onclick = async () => {
+      if (!piUser) return;
+      statusEl.textContent = "Status: Initializing Payment...";
       try {
         await Pi.createPayment({
           amount: 1.0,
@@ -106,15 +104,20 @@
           metadata: { uid: piUser.uid },
         }, {
           onReadyForServerApproval: async (pId) => {
+            statusEl.textContent = "Status: Approving...";
             await fetch("/api/pi-payment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve", paymentId: pId }) });
           },
           onReadyForServerCompletion: async (pId, txid) => {
+            statusEl.textContent = "Status: Completing...";
             await fetch("/api/pi-payment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete", paymentId: pId, txid: txid }) });
             premiumUntil = level + 10;
+            statusEl.textContent = "Status: Premium Active!";
             updateStats();
-          }
+          },
+          onCancel: () => { statusEl.textContent = "Status: Payment Cancelled"; },
+          onError: (err) => { statusEl.textContent = "Status: Payment Error"; }
         });
-      } catch (err) { console.error(err); }
+      } catch (err) { console.error(err); statusEl.textContent = "Status: Error calling SDK"; }
     };
 
     async function claimReward() {
@@ -124,7 +127,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid: piUser.uid, amount: 0.3 })
         });
-        document.getElementById("status").textContent = "0.3 Pi Reward Sent! ✅";
+        statusEl.textContent = "Status: 0.3 Pi Reward Sent! ✅";
       } catch (e) { console.error(e); }
     }
 
