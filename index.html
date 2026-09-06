@@ -2,186 +2,136 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Arena Test - Pi Network</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arena Test · Pi Testnet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Arena Test is the Pi Testnet version of Arena for safely testing Pi authentication, Premium payments and Test-Pi rewards." />
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-  <script>
-    Pi.init({ version: "2.0", sandbox: true });
-  </script>
+  <script>Pi.init({ version: "2.0", sandbox: true });</script>
   <style>
-    :root { --bg: #0f0f1a; --card-bg: #17172a; --primary: #5a6cff; --accent: #ff4757; --gold: #ffa502; --heal: #2ecc71; --text: #ffffff; }
-    body { margin: 0; min-height: 100vh; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; }
-    .app { width: 95%; max-width: 450px; background: var(--card-bg); padding: 25px; margin-top: 20px; border-radius: 24px; border: 1px solid #3a3f58; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-    h2 { margin: 0 0 10px 0; letter-spacing: 2px; color: var(--accent); text-shadow: 0 0 10px rgba(255, 71, 87, 0.5); }
-    .info-box { background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 0.85rem; line-height: 1.4; border: 1px solid #333; }
-    .stats-bar { display: flex; justify-content: space-around; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 12px; margin-bottom: 15px; font-weight: bold; font-family: monospace; border: 1px solid #222; }
-    .lives { color: var(--accent); transition: all 0.3s; }
-    .lives.heal { color: var(--heal); transform: scale(1.2); }
-    .combo-text { color: var(--gold); height: 20px; font-size: 0.9rem; margin-bottom: 10px; font-weight: bold; }
-    .grid { display: grid; gap: 8px; margin: 0 auto 20px auto; }
-    .card { aspect-ratio: 1; background: #1a1a2e; border: 2px solid var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer; transition: transform 0.2s, background 0.2s; }
-    .small-font { font-size: 1rem !important; }
-    .card.flipped { background: var(--accent); }
-    button { width: 100%; border-radius: 12px; padding: 15px; cursor: pointer; font-weight: 700; margin-top: 10px; border: none; text-transform: uppercase; }
-    #login { background: var(--primary); color: #fff; }
-    #u2a { background: var(--gold); color: #000; box-shadow: 0 4px 15px rgba(255, 165, 2, 0.3); }
-    #status { margin-top: 20px; padding: 12px; border-radius: 10px; background: #000; font-family: monospace; font-size: 0.8rem; color: #00ff00; border: 1px solid #222; }
-    footer { margin: 30px 0; font-size: 0.85rem; opacity: 0.7; }
-    footer a { color: var(--primary); text-decoration: none; margin: 0 10px; }
-    .shake { animation: shake 0.4s; }
-    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+    :root{--bg:#0f0f1a;--panel:#17172a;--primary:#5a6cff;--accent:#ff4757;--gold:#ffa502;--heal:#2ecc71;--text:#fff;--muted:#a6a6b8}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center}.app{width:95%;max-width:450px;background:var(--panel);padding:24px;margin-top:20px;border-radius:24px;border:1px solid #3a3f58;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5)}h2{margin:0 0 7px;letter-spacing:2px;color:var(--accent)}.testnet{font-size:.75rem;color:var(--gold);margin-bottom:10px}.identity{font-size:.85rem;color:var(--muted);margin-bottom:14px}.info{background:rgba(255,255,255,.05);padding:13px;border-radius:12px;margin-bottom:16px;font-size:.83rem;line-height:1.45;border:1px solid #333}.stats{display:flex;justify-content:space-around;background:rgba(0,0,0,.3);padding:12px;border-radius:12px;margin-bottom:12px;font-weight:bold;font-family:monospace}.combo{color:var(--gold);min-height:24px;font-size:.88rem;font-weight:bold}.grid{display:grid;gap:8px;margin:0 auto 18px}.card{aspect-ratio:1;background:#1a1a2e;border:2px solid var(--accent);border-radius:8px;font-size:1.4rem;color:#fff;cursor:pointer}.card.flipped{background:var(--accent)}button.action{width:100%;border-radius:12px;padding:14px;cursor:pointer;font-weight:700;margin-top:10px;border:0;text-transform:uppercase}.login{background:var(--primary);color:#fff}.premium{background:var(--gold);color:#000}.premium:disabled{opacity:.55;cursor:not-allowed}.premium-active{color:var(--gold);font-weight:700;margin:12px 0}.status{margin-top:16px;padding:10px;border-radius:10px;background:#000;font-family:monospace;font-size:.75rem;color:#00ff00;border:1px solid #222;overflow-wrap:anywhere}.note{font-size:.72rem;color:var(--muted);margin-top:6px}footer{margin:26px 0;font-size:.82rem;opacity:.75}footer a{color:var(--primary);text-decoration:none;margin:0 8px}.shake{animation:shake .4s}@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
   </style>
 </head>
 <body>
-
   <main class="app">
     <h2>⚔ ARENA TEST ⚔</h2>
-    <div id="user-display" style="font-size: 0.9rem; margin-bottom: 15px; opacity: 0.8;">Login to enter the Arena</div>
-    
-    <div id="welcome-msg" class="info-box">
-      <strong>How to play:</strong> Match the cards to survive. <br>
-      🔥 <strong>Combo x3:</strong> Earn a <strong>0.3 Pi</strong> reward!<br>
-      🏆 <strong>Premium:</strong> Unlock infinite lives for 10 levels.
-    </div>
-
-    <button id="login">LOGIN WITH PI BROWSER</button>
-
-    <div id="game-ui" style="display: none;">
-      <div class="stats-bar">
-        <span>LVL: <span id="lvl">1</span></span>
-        <span class="lives" id="lives-container">LIVES: <span id="lives">5</span></span>
-        <span>PTS: <span id="score">0</span></span>
-      </div>
-      <div id="combo-box" class="combo-text"></div>
+    <div class="testnet">PI TESTNET · TEST-π HAS NO REAL-WORLD VALUE</div>
+    <div id="identity" class="identity">Sign in with Pi to enter the Arena</div>
+    <div id="welcome" class="info"><strong>How to play:</strong> match cards to survive. A verified Triple Combo can request a <strong>0.3 Test-π</strong> reward. Premium costs <strong>1 Test-π</strong> and is restored on your verified Pi account.</div>
+    <button id="login" class="action login">LOGIN WITH PI</button>
+    <div id="game" hidden>
+      <div class="stats"><span>LVL <b id="lvl">1</b></span><span>HP <b id="lives">5</b></span><span>PTS <b id="score">0</b></span></div>
+      <div id="combo" class="combo"></div>
       <div id="grid" class="grid"></div>
-      <div id="payment-area">
-        <button id="u2a">UNLOCK PREMIUM (1.0 Test-π)</button>
-        <p style="font-size: 0.7rem; margin-top: 5px;">Valid for 10 levels</p>
-      </div>
+      <button id="premium" class="action premium">UNLOCK PREMIUM (1.0 Test-π)</button>
+      <div id="premium-active" class="premium-active" hidden>★ Premium verified</div>
+      <div class="note">Reward protection: server-verified Pi identity, fixed 0.3 Test-π amount, cooldown and daily Testnet limit.</div>
     </div>
-    <div id="status">Status: Waiting for login...</div>
+    <div id="status" class="status">Status: Waiting for login...</div>
   </main>
+  <footer><a href="/privacy.html">Privacy</a> | <a href="/terms.html">Terms</a></footer>
 
-  <footer>
-    <a href="/privacy.html">Privacy Policy</a> | <a href="/terms.html">Terms of Service</a>
-  </footer>
+<script>
+const symbols=["⚔","🔥","🛡","🏹","👑","💎","⚡","🩸","🧠","🐉","🌑","☠","🍄","⭐","🌪","🧊","🌋","🧿"];
+let accessToken=null,premium=false,storeReady=false,cards=[],selected=[],score=0,level=1,lives=5,combo=0;
+const $=id=>document.getElementById(id), statusEl=$("status");
 
-  <script>
-    const symbols = ["⚔", "🔥", "🛡", "🏹", "👑", "💎", "⚡", "🩸", "🧠", "🐉", "🌑", "☠", "🍄", "⭐", "🌪", "🧊", "🌋", "🧿"];
-    let piUser = null, cards = [], selected = [], score = 0, level = 1, lives = 5, combo = 0, premiumUntil = 0;
-    const statusEl = document.getElementById("status");
+async function api(path, body, auth=true){
+  const headers={"Content-Type":"application/json"};
+  if(auth&&accessToken) headers.Authorization=`Bearer ${accessToken}`;
+  const res=await fetch(path,{method:"POST",headers,body:JSON.stringify(body||{})});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error||`Request failed (${res.status})`);
+  return data;
+}
 
-    const onIncompletePaymentFound = async (payment) => {
-      return await fetch("/api/pi-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "complete", paymentId: payment.identifier, txid: payment.transaction.txid })
-      });
-    };
+async function onIncompletePaymentFound(payment){
+  if(!payment?.identifier) return;
+  try{await api("/api/pi-payment",{action:"recover",paymentId:payment.identifier,txid:payment.transaction?.txid||""},false);}catch(e){console.warn("Incomplete payment recovery:",e.message);}
+}
 
-    document.getElementById("login").onclick = async () => {
-      try {
-        statusEl.textContent = "Status: Authenticating...";
-        const auth = await Pi.authenticate(["username", "payments", "wallet_address"], onIncompletePaymentFound);
-        piUser = auth.user;
-        document.getElementById("user-display").textContent = `Hero: ${piUser.username}`;
-        document.getElementById("login").style.display = "none";
-        document.getElementById("welcome-msg").style.display = "none";
-        document.getElementById("game-ui").style.display = "block";
-        statusEl.textContent = "Status: Online"; // Sostituisce "Waiting for login"
+$("login").onclick=async()=>{
+  try{
+    statusEl.textContent="Status: Authenticating with Pi...";
+    const auth=await Pi.authenticate(["username","payments"],onIncompletePaymentFound);
+    if(!auth?.accessToken) throw new Error("Pi did not return an access token");
+    accessToken=auth.accessToken;
+    const session=await api("/api/auth",{});
+    premium=Boolean(session.premium); storeReady=Boolean(session.storeReady);
+    $("identity").textContent=session.username?`Hero: @${session.username}`:"Verified Pioneer";
+    $("login").hidden=true; $("welcome").hidden=true; $("game").hidden=false;
+    $("premium").hidden=premium; $("premium-active").hidden=!premium;
+    $("premium").disabled=!storeReady;
+    statusEl.textContent=storeReady?"Status: Online · verified by Pi":"Status: Online · persistent storage not configured";
+    initGame();
+  }catch(e){statusEl.textContent="Status: "+e.message;}
+};
+
+$("premium").onclick=()=>{
+  if(!accessToken||premium||!storeReady) return;
+  $("premium").disabled=true;
+  statusEl.textContent="Status: Opening Testnet payment...";
+  Pi.createPayment({amount:1,memo:"Arena Test Premium Unlock",metadata:{product:"arena_test_premium_v1"}}, {
+    onReadyForServerApproval:async paymentId=>{
+      statusEl.textContent="Status: Server approval...";
+      await api("/api/pi-payment",{action:"approve",paymentId});
+    },
+    onReadyForServerCompletion:async(paymentId,txid)=>{
+      try{
+        statusEl.textContent="Status: Server completion and verification...";
+        const result=await api("/api/pi-payment",{action:"complete",paymentId,txid});
+        if(!result.premium) throw new Error("Premium was not verified");
+        premium=true; $("premium").hidden=true; $("premium-active").hidden=false;
+        statusEl.textContent="Status: Premium active on your verified Pi account ✅";
         initGame();
-      } catch (err) { statusEl.textContent = "Error: " + err.message; }
-    };
+      }catch(e){$("premium").disabled=false;statusEl.textContent="Status: "+e.message;}
+    },
+    onCancel:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment cancelled";},
+    onError:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment error";}
+  });
+};
 
-    // Corretto: La funzione di pagamento ora gestisce meglio i messaggi di stato
-    document.getElementById("u2a").onclick = async () => {
-      if (!piUser) return;
-      statusEl.textContent = "Status: Initializing Payment...";
-      try {
-        await Pi.createPayment({
-          amount: 1.0,
-          memo: "Arena Test Premium - 10 Levels",
-          metadata: { uid: piUser.uid },
-        }, {
-          onReadyForServerApproval: async (pId) => {
-            statusEl.textContent = "Status: Approving...";
-            await fetch("/api/pi-payment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve", paymentId: pId }) });
-          },
-          onReadyForServerCompletion: async (pId, txid) => {
-            statusEl.textContent = "Status: Completing...";
-            await fetch("/api/pi-payment", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete", paymentId: pId, txid: txid }) });
-            premiumUntil = level + 10;
-            statusEl.textContent = "Status: Premium Active!";
-            updateStats();
-          },
-          onCancel: () => { statusEl.textContent = "Status: Payment Cancelled"; },
-          onError: (err) => { statusEl.textContent = "Status: Payment Error"; }
-        });
-      } catch (err) { console.error(err); statusEl.textContent = "Status: Error calling SDK"; }
-    };
+async function claimReward(){
+  if(!accessToken||!storeReady) return;
+  try{
+    statusEl.textContent="Status: Verifying Triple Combo reward...";
+    const data=await api("/api/a2u",{event:"triple_combo"});
+    statusEl.textContent=`Status: ${data.amount} Test-π reward verified and sent ✅`;
+  }catch(e){statusEl.textContent="Status: Reward not sent · "+e.message;}
+}
 
-    async function claimReward() {
-      try {
-        await fetch("/api/a2u", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uid: piUser.uid, amount: 0.3 })
-        });
-        statusEl.textContent = "Status: 0.3 Pi Reward Sent! ✅";
-      } catch (e) { console.error(e); }
-    }
+function initGame(){
+  const size=level===1?2:(level<=3?4:6), pairCount=(size*size)/2;
+  lives=premium?999:Math.min(5+(level-1),10); combo=0; selected=[];
+  const deck=[...symbols.slice(0,pairCount),...symbols.slice(0,pairCount)].sort(()=>Math.random()-.5);
+  cards=deck.map((value,id)=>({id,value,flipped:false,matched:false}));
+  $("grid").style.gridTemplateColumns=`repeat(${size},1fr)`; $("grid").innerHTML="";
+  cards.forEach(card=>{const el=document.createElement("button");el.className="card";el.type="button";el.setAttribute("aria-label","Hidden card");el.onclick=()=>flip(card,el);card.el=el;$("grid").appendChild(el);});
+  updateStats();
+}
 
-    function initGame() {
-      const isPremium = level < premiumUntil;
-      let size = level === 1 ? 2 : (level <= 3 ? 4 : 6);
-      if (level > 10) size = 6;
-      if (!isPremium) {
-        lives = Math.min(5 + (level - 1), 10);
-        document.getElementById("u2a").style.display = "block";
-      } else {
-        document.getElementById("u2a").style.display = "none";
-      }
-      let doubled = [...symbols.slice(0, (size*size)/2), ...symbols.slice(0, (size*size)/2)].sort(() => Math.random() - 0.5);
-      document.getElementById("grid").style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-      document.getElementById("grid").innerHTML = ""; cards = []; selected = []; updateStats();
-      doubled.forEach((sym, i) => {
-        const c = { id: i, value: sym, flipped: false, matched: false };
-        cards.push(c);
-        const el = document.createElement("div"); el.className = "card"; if(size>4) el.classList.add("small-font");
-        el.onclick = () => {
-          if (c.flipped || c.matched || selected.length === 2 || (level >= premiumUntil && lives <= 0)) return;
-          c.flipped = true; el.classList.add("flipped"); el.textContent = c.value;
-          selected.push({ c, el });
-          if (selected.length === 2) setTimeout(checkMatch, 500);
-        };
-        document.getElementById("grid").appendChild(el);
-      });
-    }
+function flip(card,el){
+  if(card.flipped||card.matched||selected.length===2||(!premium&&lives<=0)) return;
+  card.flipped=true;el.classList.add("flipped");el.textContent=card.value;el.setAttribute("aria-label",`Card ${card.value}`);selected.push(card);
+  if(selected.length===2) setTimeout(checkMatch,450);
+}
 
-    function checkMatch() {
-      const isPremium = level < premiumUntil;
-      const [a, b] = selected;
-      if (a.c.value === b.c.value) {
-        a.c.matched = b.c.matched = true; combo++;
-        if (!isPremium && lives < 10) { lives++; document.getElementById("lives-container").classList.add("heal"); setTimeout(()=>document.getElementById("lives-container").classList.remove("heal"),500); }
-        if (combo === 3) claimReward();
-        score += (isPremium ? 20 : 10) * combo;
-        document.getElementById("combo-box").textContent = combo >= 3 ? "🔥 TRIPLE COMBO! 0.3π SENT" : `COMBO X${combo}!`;
-        if (cards.every(c => c.matched)) { level++; setTimeout(initGame, 1000); }
-      } else {
-        combo = 0; document.getElementById("combo-box").textContent = "";
-        if (!isPremium) { lives--; document.getElementById("grid").classList.add("shake"); setTimeout(()=>document.getElementById("grid").classList.remove("shake"),400); }
-        setTimeout(() => { a.el.classList.remove("flipped"); b.el.classList.remove("flipped"); a.el.textContent = ""; b.el.textContent = ""; a.c.flipped = b.c.flipped = false; }, 400);
-      }
-      updateStats(); selected = [];
-    }
+function checkMatch(){
+  const[a,b]=selected;
+  if(a.value===b.value){
+    a.matched=b.matched=true;combo++;
+    if(!premium&&lives<10) lives++;
+    score+=(premium?20:10)*combo;
+    if(combo===3){$("combo").textContent="🔥 TRIPLE COMBO · VERIFYING 0.3 TEST-π";claimReward();}else $("combo").textContent=`COMBO X${combo}!`;
+    if(cards.every(c=>c.matched)){level++;setTimeout(initGame,800);}
+  }else{
+    combo=0;$("combo").textContent="";if(!premium)lives=Math.max(0,lives-1);$("grid").classList.add("shake");setTimeout(()=>$("grid").classList.remove("shake"),400);
+    [a,b].forEach(c=>{c.flipped=false;c.el.classList.remove("flipped");c.el.textContent="";c.el.setAttribute("aria-label","Hidden card");});
+  }
+  selected=[];updateStats();
+}
 
-    function updateStats() {
-      const isPremium = level < premiumUntil;
-      document.getElementById("lvl").textContent = level;
-      document.getElementById("lives").textContent = isPremium ? "∞" : lives;
-      document.getElementById("score").textContent = score;
-    }
-  </script>
+function updateStats(){$("lvl").textContent=level;$("lives").textContent=premium?"∞":lives;$("score").textContent=score;}
+</script>
 </body>
 </html>
