@@ -45,6 +45,23 @@ async function api(path, body, auth=true){
   return data;
 }
 
+async function saveProgress(){
+  if(!accessToken||!storeReady) return;
+  try{await api("/api/game-state",{action:"save",state:{level,lives,score}});}catch(e){console.warn("Progress save:",e.message);}
+}
+
+async function loadProgress(){
+  if(!accessToken||!storeReady) return false;
+  try{
+    const data=await api("/api/game-state",{action:"load"});
+    if(!data.state) return false;
+    level=Math.max(1,Number(data.state.level)||1);
+    score=Math.max(0,Number(data.state.score)||0);
+    lives=Math.max(0,Number(data.state.lives)||0);
+    return true;
+  }catch(e){console.warn("Progress load:",e.message);return false;}
+}
+
 async function onIncompletePaymentFound(payment){
   if(!payment?.identifier) return;
   try{await api("/api/pi-payment",{action:"recover",paymentId:payment.identifier,txid:payment.transaction?.txid||""},false);}catch(e){console.warn("Incomplete payment recovery:",e.message);}
@@ -62,8 +79,9 @@ $("login").onclick=async()=>{
     $("login").hidden=true; $("welcome").hidden=true; $("game").hidden=false;
     $("premium").hidden=premium; $("premium-active").hidden=!premium;
     $("premium").disabled=!storeReady;
-    statusEl.textContent=storeReady?"Status: Online · verified by Pi":"Status: Online · persistent storage not configured";
-    initGame();
+    const restored=await loadProgress();
+    statusEl.textContent=storeReady?(restored?"Status: Online · progress restored · verified by Pi":"Status: Online · verified by Pi"):"Status: Online · persistent storage not configured";
+    initGame(restored);
   }catch(e){statusEl.textContent="Status: "+e.message;}
 };
 
@@ -72,63 +90,34 @@ $("premium").onclick=()=>{
   $("premium").disabled=true;
   statusEl.textContent="Status: Opening Testnet payment...";
   Pi.createPayment({amount:1,memo:"Arena Test Premium Unlock",metadata:{product:"arena_test_premium_v1"}}, {
-    onReadyForServerApproval:async paymentId=>{
-      statusEl.textContent="Status: Server approval...";
-      await api("/api/pi-payment",{action:"approve",paymentId});
-    },
+    onReadyForServerApproval:async paymentId=>{statusEl.textContent="Status: Server approval...";await api("/api/pi-payment",{action:"approve",paymentId});},
     onReadyForServerCompletion:async(paymentId,txid)=>{
-      try{
-        statusEl.textContent="Status: Server completion and verification...";
-        const result=await api("/api/pi-payment",{action:"complete",paymentId,txid});
-        if(!result.premium) throw new Error("Premium was not verified");
-        premium=true; $("premium").hidden=true; $("premium-active").hidden=false;
-        statusEl.textContent="Status: Premium active on your verified Pi account ✅";
-        initGame();
-      }catch(e){$("premium").disabled=false;statusEl.textContent="Status: "+e.message;}
+      try{statusEl.textContent="Status: Server completion and verification...";const result=await api("/api/pi-payment",{action:"complete",paymentId,txid});if(!result.premium)throw new Error("Premium was not verified");premium=true;$("premium").hidden=true;$("premium-active").hidden=false;statusEl.textContent="Status: Premium active on your verified Pi account ✅";initGame(false);}catch(e){$("premium").disabled=false;statusEl.textContent="Status: "+e.message;}
     },
-    onCancel:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment cancelled";},
-    onError:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment error";}
+    onCancel:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment cancelled";},onError:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment error";}
   });
 };
 
-async function claimReward(){
-  if(!accessToken||!storeReady) return;
-  try{
-    statusEl.textContent="Status: Verifying Triple Combo reward...";
-    const data=await api("/api/a2u",{event:"triple_combo"});
-    statusEl.textContent=`Status: ${data.amount} Test-π reward verified and sent ✅`;
-  }catch(e){statusEl.textContent="Status: Reward not sent · "+e.message;}
-}
+async function claimReward(){if(!accessToken||!storeReady)return;try{statusEl.textContent="Status: Verifying Triple Combo reward...";const data=await api("/api/a2u",{event:"triple_combo"});statusEl.textContent=`Status: ${data.amount} Test-π reward verified and sent ✅`;}catch(e){statusEl.textContent="Status: Reward not sent · "+e.message;}}
 
-function initGame(){
-  const size=level===1?2:(level<=3?4:6), pairCount=(size*size)/2;
-  lives=premium?999:Math.min(5+(level-1),10); combo=0; selected=[];
+function initGame(restoreLives=false){
+  const size=level===1?2:(level<=3?4:6),pairCount=(size*size)/2;
+  if(!restoreLives) lives=premium?999:Math.min(5+(level-1),10);
+  combo=0;selected=[];
   const deck=[...symbols.slice(0,pairCount),...symbols.slice(0,pairCount)].sort(()=>Math.random()-.5);
   cards=deck.map((value,id)=>({id,value,flipped:false,matched:false}));
-  $("grid").style.gridTemplateColumns=`repeat(${size},1fr)`; $("grid").innerHTML="";
+  $("grid").style.gridTemplateColumns=`repeat(${size},1fr)`;$("grid").innerHTML="";
   cards.forEach(card=>{const el=document.createElement("button");el.className="card";el.type="button";el.setAttribute("aria-label","Hidden card");el.onclick=()=>flip(card,el);card.el=el;$("grid").appendChild(el);});
   updateStats();
 }
 
-function flip(card,el){
-  if(card.flipped||card.matched||selected.length===2||(!premium&&lives<=0)) return;
-  card.flipped=true;el.classList.add("flipped");el.textContent=card.value;el.setAttribute("aria-label",`Card ${card.value}`);selected.push(card);
-  if(selected.length===2) setTimeout(checkMatch,450);
-}
+function flip(card,el){if(card.flipped||card.matched||selected.length===2||(!premium&&lives<=0))return;card.flipped=true;el.classList.add("flipped");el.textContent=card.value;el.setAttribute("aria-label",`Card ${card.value}`);selected.push(card);if(selected.length===2)setTimeout(checkMatch,450);}
 
 function checkMatch(){
   const[a,b]=selected;
-  if(a.value===b.value){
-    a.matched=b.matched=true;combo++;
-    if(!premium&&lives<10) lives++;
-    score+=(premium?20:10)*combo;
-    if(combo===3){$("combo").textContent="🔥 TRIPLE COMBO · VERIFYING 0.3 TEST-π";claimReward();}else $("combo").textContent=`COMBO X${combo}!`;
-    if(cards.every(c=>c.matched)){level++;setTimeout(initGame,800);}
-  }else{
-    combo=0;$("combo").textContent="";if(!premium)lives=Math.max(0,lives-1);$("grid").classList.add("shake");setTimeout(()=>$("grid").classList.remove("shake"),400);
-    [a,b].forEach(c=>{c.flipped=false;c.el.classList.remove("flipped");c.el.textContent="";c.el.setAttribute("aria-label","Hidden card");});
-  }
-  selected=[];updateStats();
+  if(a.value===b.value){a.matched=b.matched=true;combo++;if(!premium&&lives<10)lives++;score+=(premium?20:10)*combo;if(combo===3){$("combo").textContent="🔥 TRIPLE COMBO · VERIFYING 0.3 TEST-π";claimReward();}else $("combo").textContent=`COMBO X${combo}!`;if(cards.every(c=>c.matched)){level++;updateStats();saveProgress();setTimeout(()=>initGame(false),800);}}
+  else{combo=0;$("combo").textContent="";if(!premium)lives=Math.max(0,lives-1);$("grid").classList.add("shake");setTimeout(()=>$("grid").classList.remove("shake"),400);[a,b].forEach(c=>{c.flipped=false;c.el.classList.remove("flipped");c.el.textContent="";c.el.setAttribute("aria-label","Hidden card");});}
+  selected=[];updateStats();saveProgress();
 }
 
 function updateStats(){$("lvl").textContent=level;$("lives").textContent=premium?"∞":lives;$("score").textContent=score;}
