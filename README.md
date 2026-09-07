@@ -2,6 +2,20 @@
 
 Arena Test is the hardened Pi Testnet companion for Arena Mainnet. It is intentionally configured with `Pi.init({ version: "2.0", sandbox: true })` and uses Test-Pi only.
 
+## Review / release status
+
+- Network: **Pi Testnet**
+- Pi SDK mode: `sandbox: true`
+- Developer Portal version currently submitted/pending: **1.0.1**
+- Authentication: Pi SDK only
+- Transactions: Test-Pi only
+- Premium: **1 Test-Pi U2A**, verified server-side and persisted by verified Pi UID
+- A2U gameplay reward: **0.3 Test-Pi** for a server-verified Triple Combo, with durable anti-duplication controls
+- Gameplay progress: persisted server-side and restored by verified Pi UID
+- Public review documents: `privacy.html`, `terms.html`, and `validation-key.txt` on the deployed HTTPS domain
+
+The current Developer Portal update request should not be discarded merely to change the version number; use the next version only for a future submission after the pending review is resolved.
+
 ## Current verified behavior
 
 - Pi identity is verified server-side with `/v2/me`; client-provided identity is never trusted for backend authorization.
