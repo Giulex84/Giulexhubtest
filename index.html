@@ -26,7 +26,7 @@
       <button id="restart" class="action restart" hidden>RESTART LEVEL</button>
       <button id="premium" class="action premium">UNLOCK PREMIUM (1.0 Test-π)</button>
       <div id="premium-active" class="premium-active" hidden>★ Premium verified</div>
-      <div class="note">Reward protection: server-verified Pi identity, fixed 0.3 Test-π amount, cooldown and daily Testnet limit.</div>
+      <div class="note">Reward protection: server-verified Pi identity, fixed 0.3 Test-π amount, crash recovery, cooldown and daily Testnet limit.</div>
     </div>
     <div id="status" class="status">Status: Waiting for login...</div>
   </main>
@@ -34,7 +34,7 @@
 
 <script>
 const symbols=["⚔","🔥","🛡","🏹","👑","💎","⚡","🩸","🧠","🐉","🌑","☠","🍄","⭐","🌪","🧊","🌋","🧿"];
-let accessToken=null,premium=false,storeReady=false,cards=[],selected=[],score=0,level=1,lives=5,combo=0;
+let accessToken=null,premium=false,storeReady=false,cards=[],selected=[],score=0,level=1,lives=5,combo=0,rewardInFlight=false;
 const $=id=>document.getElementById(id), statusEl=$("status");
 
 async function api(path, body, auth=true){
@@ -42,114 +42,50 @@ async function api(path, body, auth=true){
   if(auth&&accessToken) headers.Authorization=`Bearer ${accessToken}`;
   const res=await fetch(path,{method:"POST",headers,body:JSON.stringify(body||{})});
   const data=await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error(data.error||`Request failed (${res.status})`);
+  if(!res.ok){const err=new Error(data.error||`Request failed (${res.status})`);err.status=res.status;err.data=data;throw err;}
   return data;
 }
 
-async function saveProgress(){
-  if(!accessToken||!storeReady) return;
-  try{await api("/api/game-state",{action:"save",state:{level,lives,score}});}catch(e){console.warn("Progress save:",e.message);}
-}
+async function saveProgress(){if(!accessToken||!storeReady)return;try{await api("/api/game-state",{action:"save",state:{level,lives,score}});}catch(e){console.warn("Progress save:",e.message);}}
+async function loadProgress(){if(!accessToken||!storeReady)return false;try{const data=await api("/api/game-state",{action:"load"});if(!data.state)return false;level=Math.max(1,Number(data.state.level)||1);score=Math.max(0,Number(data.state.score)||0);lives=Math.max(0,Number(data.state.lives)||0);return true;}catch(e){console.warn("Progress load:",e.message);return false;}}
+async function onIncompletePaymentFound(payment){if(!payment?.identifier)return;try{await api("/api/pi-payment",{action:"recover",paymentId:payment.identifier,txid:payment.transaction?.txid||""},false);}catch(e){console.warn("Incomplete payment recovery:",e.message);}}
 
-async function loadProgress(){
-  if(!accessToken||!storeReady) return false;
+$("login").onclick=async()=>{try{statusEl.textContent="Status: Authenticating with Pi...";const auth=await Pi.authenticate(["username","payments","wallet_address"],onIncompletePaymentFound);if(!auth?.accessToken)throw new Error("Pi did not return an access token");accessToken=auth.accessToken;const session=await api("/api/auth",{});premium=Boolean(session.premium);storeReady=Boolean(session.storeReady);$("identity").textContent=session.username?`Hero: @${session.username}`:"Verified Pioneer";$("login").hidden=true;$("welcome").hidden=true;$("game").hidden=false;$("premium").hidden=premium;$("premium-active").hidden=!premium;$("premium").disabled=!storeReady;const restored=await loadProgress();initGame(restored);if(!premium&&lives<=0){showGameOver(restored?"Status: Game over · progress restored · restart this level":"Status: Game over · restart this level");}else{statusEl.textContent=storeReady?(restored?"Status: Online · progress restored · verified by Pi":"Status: Online · verified by Pi"):"Status: Online · persistent storage not configured";}}catch(e){statusEl.textContent="Status: "+e.message;}};
+
+$("restart").onclick=async()=>{if(premium)return;lives=Math.min(5+(level-1),10);combo=0;$("combo").textContent="";$("restart").hidden=true;statusEl.textContent="Status: Level restarted · progress preserved";initGame(true);await saveProgress();};
+
+$("premium").onclick=()=>{if(!accessToken||premium||!storeReady)return;$("premium").disabled=true;statusEl.textContent="Status: Opening Testnet payment...";Pi.createPayment({amount:1,memo:"Arena Test Premium Unlock",metadata:{product:"arena_test_premium_v1"}}, {onReadyForServerApproval:async paymentId=>{statusEl.textContent="Status: Server approval...";await api("/api/pi-payment",{action:"approve",paymentId});},onReadyForServerCompletion:async(paymentId,txid)=>{try{statusEl.textContent="Status: Server completion and verification...";const result=await api("/api/pi-payment",{action:"complete",paymentId,txid});if(!result.premium)throw new Error("Premium was not verified");premium=true;$("premium").hidden=true;$("premium-active").hidden=false;$("restart").hidden=true;statusEl.textContent="Status: Premium active on your verified Pi account ✅";initGame(false);}catch(e){$("premium").disabled=false;statusEl.textContent="Status: "+e.message;}},onCancel:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment cancelled";},onError:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment error";}});};
+
+function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+async function claimReward(){
+  if(!accessToken||!storeReady||rewardInFlight)return;
+  rewardInFlight=true;
+  const delays=[0,1800,3500];
   try{
-    const data=await api("/api/game-state",{action:"load"});
-    if(!data.state) return false;
-    level=Math.max(1,Number(data.state.level)||1);
-    score=Math.max(0,Number(data.state.score)||0);
-    lives=Math.max(0,Number(data.state.lives)||0);
-    return true;
-  }catch(e){console.warn("Progress load:",e.message);return false;}
-}
-
-async function onIncompletePaymentFound(payment){
-  if(!payment?.identifier) return;
-  try{await api("/api/pi-payment",{action:"recover",paymentId:payment.identifier,txid:payment.transaction?.txid||""},false);}catch(e){console.warn("Incomplete payment recovery:",e.message);}
-}
-
-$("login").onclick=async()=>{
-  try{
-    statusEl.textContent="Status: Authenticating with Pi...";
-    const auth=await Pi.authenticate(["username","payments","wallet_address"],onIncompletePaymentFound);
-    if(!auth?.accessToken) throw new Error("Pi did not return an access token");
-    accessToken=auth.accessToken;
-    const session=await api("/api/auth",{});
-    premium=Boolean(session.premium); storeReady=Boolean(session.storeReady);
-    $("identity").textContent=session.username?`Hero: @${session.username}`:"Verified Pioneer";
-    $("login").hidden=true; $("welcome").hidden=true; $("game").hidden=false;
-    $("premium").hidden=premium; $("premium-active").hidden=!premium;
-    $("premium").disabled=!storeReady;
-    const restored=await loadProgress();
-    initGame(restored);
-    if(!premium&&lives<=0){
-      showGameOver(restored?"Status: Game over · progress restored · restart this level":"Status: Game over · restart this level");
-    }else{
-      statusEl.textContent=storeReady?(restored?"Status: Online · progress restored · verified by Pi":"Status: Online · verified by Pi"):"Status: Online · persistent storage not configured";
+    for(let i=0;i<delays.length;i++){
+      if(delays[i])await wait(delays[i]);
+      try{
+        statusEl.textContent=i===0?"Status: Reward · creating server payment...":"Status: Reward · recovering pending transaction...";
+        const data=await api("/api/a2u",{event:"triple_combo"});
+        statusEl.textContent=`Status: ${data.amount} Test-π reward verified and sent${data.recovered?" · recovered safely":""} ✅`;
+        $("combo").textContent="🔥 TRIPLE COMBO · REWARD VERIFIED";
+        return;
+      }catch(e){
+        if(!(e.status===409&&e.data?.retryable) || i===delays.length-1)throw e;
+        statusEl.textContent="Status: Reward · blockchain/payment pending, retrying safely...";
+      }
     }
-  }catch(e){statusEl.textContent="Status: "+e.message;}
-};
-
-$("restart").onclick=async()=>{
-  if(premium) return;
-  lives=Math.min(5+(level-1),10);
-  combo=0;
-  $("combo").textContent="";
-  $("restart").hidden=true;
-  statusEl.textContent="Status: Level restarted · progress preserved";
-  initGame(true);
-  await saveProgress();
-};
-
-$("premium").onclick=()=>{
-  if(!accessToken||premium||!storeReady) return;
-  $("premium").disabled=true;
-  statusEl.textContent="Status: Opening Testnet payment...";
-  Pi.createPayment({amount:1,memo:"Arena Test Premium Unlock",metadata:{product:"arena_test_premium_v1"}}, {
-    onReadyForServerApproval:async paymentId=>{statusEl.textContent="Status: Server approval...";await api("/api/pi-payment",{action:"approve",paymentId});},
-    onReadyForServerCompletion:async(paymentId,txid)=>{
-      try{statusEl.textContent="Status: Server completion and verification...";const result=await api("/api/pi-payment",{action:"complete",paymentId,txid});if(!result.premium)throw new Error("Premium was not verified");premium=true;$("premium").hidden=true;$("premium-active").hidden=false;$("restart").hidden=true;statusEl.textContent="Status: Premium active on your verified Pi account ✅";initGame(false);}catch(e){$("premium").disabled=false;statusEl.textContent="Status: "+e.message;}
-    },
-    onCancel:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment cancelled";},onError:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment error";}
-  });
-};
-
-async function claimReward(){if(!accessToken||!storeReady)return;try{statusEl.textContent="Status: Verifying Triple Combo reward...";const data=await api("/api/a2u",{event:"triple_combo"});statusEl.textContent=`Status: ${data.amount} Test-π reward verified and sent ✅`;}catch(e){statusEl.textContent="Status: Reward not sent · "+e.message;}}
-
-function showGameOver(message="Status: Game over · restart this level"){
-  $("restart").hidden=false;
-  statusEl.textContent=message;
-  updateStats();
-}
-
-function initGame(restoreLives=false){
-  const size=level===1?2:(level<=3?4:6),pairCount=(size*size)/2;
-  if(!restoreLives) lives=premium?999:Math.min(5+(level-1),10);
-  combo=0;selected=[];
-  $("restart").hidden=premium||lives>0;
-  const deck=[...symbols.slice(0,pairCount),...symbols.slice(0,pairCount)].sort(()=>Math.random()-.5);
-  cards=deck.map((value,id)=>({id,value,flipped:false,matched:false}));
-  $("grid").style.gridTemplateColumns=`repeat(${size},1fr)`;$("grid").innerHTML="";
-  cards.forEach(card=>{const el=document.createElement("button");el.className="card";el.type="button";el.setAttribute("aria-label","Hidden card");el.onclick=()=>flip(card,el);card.el=el;$("grid").appendChild(el);});
-  updateStats();
-}
-
-function flip(card,el){if(card.flipped||card.matched||selected.length===2||(!premium&&lives<=0))return;card.flipped=true;el.classList.add("flipped");el.textContent=card.value;el.setAttribute("aria-label",`Card ${card.value}`);selected.push(card);if(selected.length===2)setTimeout(checkMatch,450);}
-
-function checkMatch(){
-  const[a,b]=selected;
-  if(a.value===b.value){
-    a.matched=b.matched=true;combo++;if(!premium&&lives<10)lives++;score+=(premium?20:10)*combo;
-    if(combo===3){$("combo").textContent="🔥 TRIPLE COMBO · VERIFYING 0.3 TEST-π";claimReward();}else $("combo").textContent=`COMBO X${combo}!`;
-    if(cards.every(c=>c.matched)){level++;updateStats();saveProgress();setTimeout(()=>initGame(false),800);}
-  }else{
-    combo=0;$("combo").textContent="";if(!premium)lives=Math.max(0,lives-1);$("grid").classList.add("shake");setTimeout(()=>$("grid").classList.remove("shake"),400);
-    [a,b].forEach(c=>{c.flipped=false;c.el.classList.remove("flipped");c.el.textContent="";c.el.setAttribute("aria-label","Hidden card");});
+  }catch(e){
+    statusEl.textContent="Status: Reward not sent · "+e.message;
+  }finally{
+    rewardInFlight=false;
   }
-  selected=[];updateStats();saveProgress();
-  if(!premium&&lives<=0) showGameOver();
 }
 
+function showGameOver(message="Status: Game over · restart this level"){$("restart").hidden=false;statusEl.textContent=message;updateStats();}
+function initGame(restoreLives=false){const size=level===1?2:(level<=3?4:6),pairCount=(size*size)/2;if(!restoreLives)lives=premium?999:Math.min(5+(level-1),10);combo=0;selected=[];$("restart").hidden=premium||lives>0;const deck=[...symbols.slice(0,pairCount),...symbols.slice(0,pairCount)].sort(()=>Math.random()-.5);cards=deck.map((value,id)=>({id,value,flipped:false,matched:false}));$("grid").style.gridTemplateColumns=`repeat(${size},1fr)`;$("grid").innerHTML="";cards.forEach(card=>{const el=document.createElement("button");el.className="card";el.type="button";el.setAttribute("aria-label","Hidden card");el.onclick=()=>flip(card,el);card.el=el;$("grid").appendChild(el);});updateStats();}
+function flip(card,el){if(card.flipped||card.matched||selected.length===2||(!premium&&lives<=0))return;card.flipped=true;el.classList.add("flipped");el.textContent=card.value;el.setAttribute("aria-label",`Card ${card.value}`);selected.push(card);if(selected.length===2)setTimeout(checkMatch,450);}
+function checkMatch(){const[a,b]=selected;if(a.value===b.value){a.matched=b.matched=true;combo++;if(!premium&&lives<10)lives++;score+=(premium?20:10)*combo;if(combo===3){$("combo").textContent="🔥 TRIPLE COMBO · VERIFYING 0.3 TEST-π";claimReward();}else $("combo").textContent=`COMBO X${combo}!`;if(cards.every(c=>c.matched)){level++;updateStats();saveProgress();setTimeout(()=>initGame(false),800);}}else{combo=0;$("combo").textContent="";if(!premium)lives=Math.max(0,lives-1);$("grid").classList.add("shake");setTimeout(()=>$("grid").classList.remove("shake"),400);[a,b].forEach(c=>{c.flipped=false;c.el.classList.remove("flipped");c.el.textContent="";c.el.setAttribute("aria-label","Hidden card");});}selected=[];updateStats();saveProgress();if(!premium&&lives<=0)showGameOver();}
 function updateStats(){$("lvl").textContent=level;$("lives").textContent=premium?"∞":lives;$("score").textContent=score;}
 </script>
 </body>
