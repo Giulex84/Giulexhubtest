@@ -71,7 +71,7 @@ async function onIncompletePaymentFound(payment){
 $("login").onclick=async()=>{
   try{
     statusEl.textContent="Status: Authenticating with Pi...";
-    const auth=await Pi.authenticate(["username","payments"],onIncompletePaymentFound);
+    const auth=await Pi.authenticate(["username","payments","wallet_address"],onIncompletePaymentFound);
     if(!auth?.accessToken) throw new Error("Pi did not return an access token");
     accessToken=auth.accessToken;
     const session=await api("/api/auth",{});
