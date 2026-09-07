@@ -12,6 +12,149 @@ const {
 } = require("../lib/pi");
 const { isStoreConfigured, acquireRewardPermit, recordReward } = require("../lib/store");
 
+const HORIZON_URL = "https://api.testnet.minepi.com";
+const NETWORK_PASSPHRASE = "Pi Testnet";
+
+async function getIncompleteServerPayments() {
+  const response = await fetch(`${PI_API_BASE}/payments/incomplete_server_payments`, {
+    headers: { Authorization: `Key ${getServerApiKey()}` },
+    cache: "no-store",
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.error || "Could not inspect incomplete reward payments");
+  return Array.isArray(data?.incomplete_server_payments) ? data.incomplete_server_payments : [];
+}
+
+function isArenaReward(payment, uid) {
+  if (!payment || payment.user_uid !== uid) return false;
+  if (payment.direction !== "app_to_user") return false;
+  if (payment.network !== "Pi Testnet") return false;
+  if (Number(payment.amount) !== REWARD_AMOUNT) return false;
+  if (payment.memo !== REWARD_MEMO) return false;
+  if (payment.metadata?.event !== "triple_combo") return false;
+  if (payment.status?.cancelled || payment.status?.user_cancelled) return false;
+  return true;
+}
+
+async function findSubmittedTransaction(server, sourceAddress, paymentId) {
+  try {
+    const page = await server.transactions().forAccount(sourceAddress).order("desc").limit(50).call();
+    const match = page.records.find((tx) => tx.successful && tx.memo_type === "text" && tx.memo === paymentId);
+    return match?.hash || null;
+  } catch {
+    return null;
+  }
+}
+
+async function submitRewardTransaction(payment) {
+  const paymentId = payment.identifier;
+  const destination = payment.to_address;
+  if (!paymentId || !destination) throw new Error("Pi returned an incomplete reward payment");
+
+  const server = new StellarSdk.Horizon.Server(HORIZON_URL);
+  const keypair = StellarSdk.Keypair.fromSecret(process.env.PI_APP_WALLET_SEED);
+  const sourceAddress = keypair.publicKey();
+
+  if (payment.from_address && payment.from_address !== sourceAddress) {
+    throw new Error("Configured reward wallet does not match the Pi payment source wallet");
+  }
+
+  // Recovery safety: before creating a second blockchain transaction, look for
+  // one already submitted with this payment identifier as its memo.
+  const existingTxid = await findSubmittedTransaction(server, sourceAddress, paymentId);
+  if (existingTxid) return existingTxid;
+
+  const account = await server.loadAccount(sourceAddress);
+  const tx = new StellarSdk.TransactionBuilder(account, {
+    fee: "1000000",
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addMemo(StellarSdk.Memo.text(paymentId))
+    .addOperation(StellarSdk.Operation.payment({
+      destination,
+      asset: StellarSdk.Asset.native(),
+      amount: REWARD_AMOUNT.toFixed(7),
+    }))
+    .setTimeout(120)
+    .build();
+
+  tx.sign(keypair);
+  const result = await server.submitTransaction(tx);
+  return result.hash;
+}
+
+async function finalizeReward(payment, uid, recovered = false) {
+  const invalid = validateRewardPayment(payment, uid);
+  if (invalid) throw new Error(invalid);
+
+  const paymentId = payment.identifier;
+
+  if (payment.status?.developer_completed && payment.status?.transaction_verified) {
+    const txid = payment.transaction?.txid || "verified";
+    await recordReward(uid, paymentId, txid);
+    return { paymentId, txid, recovered: true };
+  }
+
+  // If Pi already knows the blockchain transaction, never submit another one.
+  let txid = payment.transaction?.txid || null;
+  if (!txid) txid = await submitRewardTransaction(payment);
+
+  const complete = await piPost(`/payments/${encodeURIComponent(paymentId)}/complete`, { txid });
+  const completeError = complete.data?.error;
+  if (!complete.response.ok && completeError !== "already_completed") {
+    throw new Error(completeError || "Reward completion failed");
+  }
+
+  const verified = await getPayment(paymentId);
+  const verifiedInvalid = validateRewardPayment(verified, uid);
+  if (verifiedInvalid) throw new Error(verifiedInvalid);
+  if (!verified.status?.developer_completed || !verified.status?.transaction_verified) {
+    throw new Error("Reward transaction is not fully verified yet");
+  }
+
+  await recordReward(uid, paymentId, txid);
+  return { paymentId, txid, recovered };
+}
+
+async function recoverExistingReward(uid) {
+  const incomplete = await getIncompleteServerPayments();
+  const matching = incomplete.find((payment) => isArenaReward(payment, uid));
+  if (!matching) return null;
+  return finalizeReward(matching, uid, true);
+}
+
+async function createReward(uid) {
+  const response = await fetch(`${PI_API_BASE}/payments`, {
+    method: "POST",
+    headers: {
+      Authorization: `Key ${getServerApiKey()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      payment: {
+        amount: REWARD_AMOUNT,
+        memo: REWARD_MEMO,
+        metadata: { event: "triple_combo", source: "ArenaTest", uid },
+        uid,
+      },
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    if (data?.error === "ongoing_payment_found") {
+      const recovered = await recoverExistingReward(uid);
+      if (recovered) return recovered;
+      throw new Error("Another Test-Pi server payment is still in progress. Retry shortly.");
+    }
+    throw new Error(data?.error || "Could not create reward payment");
+  }
+
+  // A2U payments are server payments. They are created for blockchain
+  // submission and completion; do not run the U2A /approve phase here.
+  return finalizeReward(data, uid, false);
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -24,80 +167,39 @@ module.exports = async function handler(req, res) {
 
   try {
     const user = await verifyAccessToken(token);
+
+    // Resolve a previous A2U payment first. Pi explicitly requires incomplete
+    // server payments to be completed before a new A2U payment can be created.
+    const recovered = await recoverExistingReward(user.uid);
+    if (recovered) {
+      return res.status(200).json({
+        success: true,
+        amount: REWARD_AMOUNT,
+        paymentId: recovered.paymentId,
+        txid: recovered.txid,
+        recovered: true,
+      });
+    }
+
+    // Only a genuinely new reward consumes cooldown/daily quota.
     await acquireRewardPermit(user.uid);
+    const result = await createReward(user.uid);
 
-    const createRes = await fetch(`${PI_API_BASE}/payments`, {
-      method: "POST",
-      headers: {
-        Authorization: `Key ${getServerApiKey()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        payment: {
-          amount: REWARD_AMOUNT,
-          memo: REWARD_MEMO,
-          metadata: { event: "triple_combo", source: "ArenaTest" },
-          uid: user.uid,
-        },
-      }),
+    return res.status(200).json({
+      success: true,
+      amount: REWARD_AMOUNT,
+      paymentId: result.paymentId,
+      txid: result.txid,
+      recovered: Boolean(result.recovered),
     });
-    const createData = await createRes.json().catch(() => ({}));
-    if (!createRes.ok) {
-      const message = createData?.error === "ongoing_payment_found"
-        ? "A Test-Pi reward is already in progress. Try again after it settles."
-        : (createData?.error || "Could not create reward payment");
-      return res.status(createRes.status).json({ error: message });
-    }
-
-    const paymentId = createData.identifier;
-    const destination = createData.to_address;
-    if (!paymentId || !destination) return res.status(502).json({ error: "Pi returned an incomplete reward payment" });
-
-    // A2U payments may already be approved by Pi when they are created.
-    // Treat "already_approved" as an idempotent success and continue to the
-    // blockchain submission instead of aborting the reward flow.
-    const approve = await piPost(`/payments/${encodeURIComponent(paymentId)}/approve`);
-    const approveError = approve.data?.error;
-    if (!approve.response.ok && approveError !== "already_approved") {
-      return res.status(approve.response.status).json({ error: approveError || "Reward approval failed" });
-    }
-
-    const server = new StellarSdk.Horizon.Server("https://api.testnet.minepi.com");
-    const keypair = StellarSdk.Keypair.fromSecret(process.env.PI_APP_WALLET_SEED);
-    const account = await server.loadAccount(keypair.publicKey());
-    const tx = new StellarSdk.TransactionBuilder(account, {
-      fee: "1000000",
-      networkPassphrase: "Pi Testnet",
-    })
-      .addMemo(StellarSdk.Memo.text(paymentId))
-      .addOperation(StellarSdk.Operation.payment({
-        destination,
-        asset: StellarSdk.Asset.native(),
-        amount: REWARD_AMOUNT.toFixed(7),
-      }))
-      .setTimeout(120)
-      .build();
-
-    tx.sign(keypair);
-    const result = await server.submitTransaction(tx);
-    const txid = result.hash;
-
-    const complete = await piPost(`/payments/${encodeURIComponent(paymentId)}/complete`, { txid });
-    if (!complete.response.ok) return res.status(complete.response.status).json({ error: complete.data?.error || "Reward completion failed" });
-
-    const verified = await getPayment(paymentId);
-    const invalid = validateRewardPayment(verified, user.uid);
-    if (invalid) return res.status(409).json({ error: invalid });
-    if (!verified.status?.developer_completed || !verified.status?.transaction_verified) {
-      return res.status(409).json({ error: "Reward transaction is not fully verified" });
-    }
-
-    await recordReward(user.uid, paymentId, txid);
-    return res.status(200).json({ success: true, amount: REWARD_AMOUNT, paymentId, txid });
   } catch (error) {
     const msg = error?.message || "Reward processing failed";
+    console.error("A2U reward error:", msg);
     if (msg === "Unauthorized") return res.status(401).json({ error: "Pi authentication could not be verified" });
     if (msg.includes("cooldown") || msg.includes("limit")) return res.status(429).json({ error: msg });
-    return res.status(500).json({ error: "Reward processing failed" });
+    if (msg.includes("still in progress") || msg.includes("not fully verified yet")) return res.status(409).json({ error: msg });
+    if (msg.includes("does not belong") || msg.includes("Unexpected") || msg.includes("Malformed")) return res.status(409).json({ error: msg });
+    if (msg.includes("wallet does not match")) return res.status(503).json({ error: msg });
+    return res.status(500).json({ error: msg });
   }
 };
