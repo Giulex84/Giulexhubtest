@@ -10,7 +10,14 @@ const {
   validateRewardPayment,
   getServerApiKey,
 } = require("../lib/pi");
-const { isStoreConfigured, acquireRewardPermit, recordReward } = require("../lib/store");
+const {
+  isStoreConfigured,
+  beginRewardAttempt,
+  releaseRewardAttempt,
+  commitRewardAttempt,
+  recordReward,
+  getRewardReceipt,
+} = require("../lib/store");
 
 const HORIZON_URL = "https://api.testnet.minepi.com";
 const NETWORK_PASSPHRASE = "Pi Testnet";
@@ -38,7 +45,7 @@ function isArenaReward(payment, uid) {
 
 async function findSubmittedTransaction(server, sourceAddress, paymentId) {
   try {
-    const page = await server.transactions().forAccount(sourceAddress).order("desc").limit(50).call();
+    const page = await server.transactions().forAccount(sourceAddress).order("desc").limit(100).call();
     const match = page.records.find((tx) => tx.successful && tx.memo_type === "text" && tx.memo === paymentId);
     return match?.hash || null;
   } catch {
@@ -59,8 +66,6 @@ async function submitRewardTransaction(payment) {
     throw new Error("Configured reward wallet does not match the Pi payment source wallet");
   }
 
-  // Recovery safety: before creating a second blockchain transaction, look for
-  // one already submitted with this payment identifier as its memo.
   const existingTxid = await findSubmittedTransaction(server, sourceAddress, paymentId);
   if (existingTxid) return existingTxid;
 
@@ -88,14 +93,18 @@ async function finalizeReward(payment, uid, recovered = false) {
   if (invalid) throw new Error(invalid);
 
   const paymentId = payment.identifier;
+  const existingReceipt = await getRewardReceipt(paymentId);
+  if (existingReceipt) {
+    if (existingReceipt.uid !== uid) throw new Error("Reward receipt belongs to another user");
+    return { paymentId, txid: existingReceipt.txid, recovered: true, alreadyRecorded: true };
+  }
 
   if (payment.status?.developer_completed && payment.status?.transaction_verified) {
     const txid = payment.transaction?.txid || "verified";
-    await recordReward(uid, paymentId, txid);
-    return { paymentId, txid, recovered: true };
+    await recordReward(uid, paymentId, txid, { amount: REWARD_AMOUNT, recovered: true });
+    return { paymentId, txid, recovered: true, alreadyRecorded: false };
   }
 
-  // If Pi already knows the blockchain transaction, never submit another one.
   let txid = payment.transaction?.txid || null;
   if (!txid) txid = await submitRewardTransaction(payment);
 
@@ -112,8 +121,8 @@ async function finalizeReward(payment, uid, recovered = false) {
     throw new Error("Reward transaction is not fully verified yet");
   }
 
-  await recordReward(uid, paymentId, txid);
-  return { paymentId, txid, recovered };
+  await recordReward(uid, paymentId, txid, { amount: REWARD_AMOUNT, recovered });
+  return { paymentId, txid, recovered, alreadyRecorded: false };
 }
 
 async function recoverExistingReward(uid) {
@@ -150,8 +159,6 @@ async function createReward(uid) {
     throw new Error(data?.error || "Could not create reward payment");
   }
 
-  // A2U payments are server payments. They are created for blockchain
-  // submission and completion; do not run the U2A /approve phase here.
   return finalizeReward(data, uid, false);
 }
 
@@ -165,15 +172,17 @@ module.exports = async function handler(req, res) {
   const token = bearerFromRequest(req);
   if (!token) return res.status(401).json({ error: "Missing Pi access token" });
 
+  let attempt = null;
   try {
     const user = await verifyAccessToken(token);
 
-    // Resolve a previous A2U payment first. Pi explicitly requires incomplete
-    // server payments to be completed before a new A2U payment can be created.
+    // Recovery is deliberately outside quota/cooldown accounting: completing a
+    // previously-created payment must never count as a second reward.
     const recovered = await recoverExistingReward(user.uid);
     if (recovered) {
       return res.status(200).json({
         success: true,
+        phase: "verified",
         amount: REWARD_AMOUNT,
         paymentId: recovered.paymentId,
         txid: recovered.txid,
@@ -181,12 +190,16 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Only a genuinely new reward consumes cooldown/daily quota.
-    await acquireRewardPermit(user.uid);
+    // Reserve concurrency first. Daily quota/cooldown are committed only after
+    // Pi has fully verified the reward, so failed attempts do not burn quota.
+    attempt = await beginRewardAttempt(user.uid);
     const result = await createReward(user.uid);
+    await commitRewardAttempt(user.uid, attempt.processId, attempt.day);
+    attempt = null;
 
     return res.status(200).json({
       success: true,
+      phase: "verified",
       amount: REWARD_AMOUNT,
       paymentId: result.paymentId,
       txid: result.txid,
@@ -195,9 +208,22 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     const msg = error?.message || "Reward processing failed";
     console.error("A2U reward error:", msg);
+
+    if (attempt) {
+      try {
+        const token2 = bearerFromRequest(req);
+        const user2 = token2 ? await verifyAccessToken(token2) : null;
+        if (user2) await releaseRewardAttempt(user2.uid, attempt.processId);
+      } catch (releaseError) {
+        console.error("A2U lock release error:", releaseError?.message || releaseError);
+      }
+    }
+
     if (msg === "Unauthorized") return res.status(401).json({ error: "Pi authentication could not be verified" });
     if (msg.includes("cooldown") || msg.includes("limit")) return res.status(429).json({ error: msg });
-    if (msg.includes("still in progress") || msg.includes("not fully verified yet")) return res.status(409).json({ error: msg });
+    if (msg.includes("processing already in progress") || msg.includes("still in progress") || msg.includes("not fully verified yet")) {
+      return res.status(409).json({ error: msg, retryable: true, phase: "pending" });
+    }
     if (msg.includes("does not belong") || msg.includes("Unexpected") || msg.includes("Malformed")) return res.status(409).json({ error: msg });
     if (msg.includes("wallet does not match")) return res.status(503).json({ error: msg });
     return res.status(500).json({ error: msg });
