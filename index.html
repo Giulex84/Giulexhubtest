@@ -9,7 +9,7 @@
   <script>Pi.init({ version: "2.0", sandbox: true });</script>
   <style>
     :root{--bg:#0f0f1a;--panel:#17172a;--primary:#5a6cff;--accent:#ff4757;--gold:#ffa502;--heal:#2ecc71;--text:#fff;--muted:#a6a6b8}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center}.app{width:95%;max-width:450px;background:var(--panel);padding:24px;margin-top:20px;border-radius:24px;border:1px solid #3a3f58;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5)}h2{margin:0 0 7px;letter-spacing:2px;color:var(--accent)}.testnet{font-size:.75rem;color:var(--gold);margin-bottom:10px}.identity{font-size:.85rem;color:var(--muted);margin-bottom:14px}.info{background:rgba(255,255,255,.05);padding:13px;border-radius:12px;margin-bottom:16px;font-size:.83rem;line-height:1.45;border:1px solid #333}.stats{display:flex;justify-content:space-around;background:rgba(0,0,0,.3);padding:12px;border-radius:12px;margin-bottom:12px;font-weight:bold;font-family:monospace}.combo{color:var(--gold);min-height:24px;font-size:.88rem;font-weight:bold}.grid{display:grid;gap:8px;margin:0 auto 18px}.card{aspect-ratio:1;background:#1a1a2e;border:2px solid var(--accent);border-radius:8px;font-size:1.4rem;color:#fff;cursor:pointer}.card.flipped{background:var(--accent)}button.action{width:100%;border-radius:12px;padding:14px;cursor:pointer;font-weight:700;margin-top:10px;border:0;text-transform:uppercase}.login{background:var(--primary);color:#fff}.premium{background:var(--gold);color:#000}.premium:disabled{opacity:.55;cursor:not-allowed}.premium-active{color:var(--gold);font-weight:700;margin:12px 0}.status{margin-top:16px;padding:10px;border-radius:10px;background:#000;font-family:monospace;font-size:.75rem;color:#00ff00;border:1px solid #222;overflow-wrap:anywhere}.note{font-size:.72rem;color:var(--muted);margin-top:6px}footer{margin:26px 0;font-size:.82rem;opacity:.75}footer a{color:var(--primary);text-decoration:none;margin:0 8px}.shake{animation:shake .4s}@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center}.app{width:95%;max-width:450px;background:var(--panel);padding:24px;margin-top:20px;border-radius:24px;border:1px solid #3a3f58;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5)}h2{margin:0 0 7px;letter-spacing:2px;color:var(--accent)}.testnet{font-size:.75rem;color:var(--gold);margin-bottom:10px}.identity{font-size:.85rem;color:var(--muted);margin-bottom:14px}.info{background:rgba(255,255,255,.05);padding:13px;border-radius:12px;margin-bottom:16px;font-size:.83rem;line-height:1.45;border:1px solid #333}.stats{display:flex;justify-content:space-around;background:rgba(0,0,0,.3);padding:12px;border-radius:12px;margin-bottom:12px;font-weight:bold;font-family:monospace}.combo{color:var(--gold);min-height:24px;font-size:.88rem;font-weight:bold}.grid{display:grid;gap:8px;margin:0 auto 18px}.card{aspect-ratio:1;background:#1a1a2e;border:2px solid var(--accent);border-radius:8px;font-size:1.4rem;color:#fff;cursor:pointer}.card.flipped{background:var(--accent)}button.action{width:100%;border-radius:12px;padding:14px;cursor:pointer;font-weight:700;margin-top:10px;border:0;text-transform:uppercase}.login{background:var(--primary);color:#fff}.premium{background:var(--gold);color:#000}.premium:disabled{opacity:.55;cursor:not-allowed}.restart{background:var(--accent);color:#fff}.premium-active{color:var(--gold);font-weight:700;margin:12px 0}.status{margin-top:16px;padding:10px;border-radius:10px;background:#000;font-family:monospace;font-size:.75rem;color:#00ff00;border:1px solid #222;overflow-wrap:anywhere}.note{font-size:.72rem;color:var(--muted);margin-top:6px}footer{margin:26px 0;font-size:.82rem;opacity:.75}footer a{color:var(--primary);text-decoration:none;margin:0 8px}.shake{animation:shake .4s}@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
   </style>
 </head>
 <body>
@@ -23,6 +23,7 @@
       <div class="stats"><span>LVL <b id="lvl">1</b></span><span>HP <b id="lives">5</b></span><span>PTS <b id="score">0</b></span></div>
       <div id="combo" class="combo"></div>
       <div id="grid" class="grid"></div>
+      <button id="restart" class="action restart" hidden>RESTART LEVEL</button>
       <button id="premium" class="action premium">UNLOCK PREMIUM (1.0 Test-π)</button>
       <div id="premium-active" class="premium-active" hidden>★ Premium verified</div>
       <div class="note">Reward protection: server-verified Pi identity, fixed 0.3 Test-π amount, cooldown and daily Testnet limit.</div>
@@ -80,9 +81,24 @@ $("login").onclick=async()=>{
     $("premium").hidden=premium; $("premium-active").hidden=!premium;
     $("premium").disabled=!storeReady;
     const restored=await loadProgress();
-    statusEl.textContent=storeReady?(restored?"Status: Online · progress restored · verified by Pi":"Status: Online · verified by Pi"):"Status: Online · persistent storage not configured";
     initGame(restored);
+    if(!premium&&lives<=0){
+      showGameOver(restored?"Status: Game over · progress restored · restart this level":"Status: Game over · restart this level");
+    }else{
+      statusEl.textContent=storeReady?(restored?"Status: Online · progress restored · verified by Pi":"Status: Online · verified by Pi"):"Status: Online · persistent storage not configured";
+    }
   }catch(e){statusEl.textContent="Status: "+e.message;}
+};
+
+$("restart").onclick=async()=>{
+  if(premium) return;
+  lives=Math.min(5+(level-1),10);
+  combo=0;
+  $("combo").textContent="";
+  $("restart").hidden=true;
+  statusEl.textContent="Status: Level restarted · progress preserved";
+  initGame(true);
+  await saveProgress();
 };
 
 $("premium").onclick=()=>{
@@ -92,7 +108,7 @@ $("premium").onclick=()=>{
   Pi.createPayment({amount:1,memo:"Arena Test Premium Unlock",metadata:{product:"arena_test_premium_v1"}}, {
     onReadyForServerApproval:async paymentId=>{statusEl.textContent="Status: Server approval...";await api("/api/pi-payment",{action:"approve",paymentId});},
     onReadyForServerCompletion:async(paymentId,txid)=>{
-      try{statusEl.textContent="Status: Server completion and verification...";const result=await api("/api/pi-payment",{action:"complete",paymentId,txid});if(!result.premium)throw new Error("Premium was not verified");premium=true;$("premium").hidden=true;$("premium-active").hidden=false;statusEl.textContent="Status: Premium active on your verified Pi account ✅";initGame(false);}catch(e){$("premium").disabled=false;statusEl.textContent="Status: "+e.message;}
+      try{statusEl.textContent="Status: Server completion and verification...";const result=await api("/api/pi-payment",{action:"complete",paymentId,txid});if(!result.premium)throw new Error("Premium was not verified");premium=true;$("premium").hidden=true;$("premium-active").hidden=false;$("restart").hidden=true;statusEl.textContent="Status: Premium active on your verified Pi account ✅";initGame(false);}catch(e){$("premium").disabled=false;statusEl.textContent="Status: "+e.message;}
     },
     onCancel:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment cancelled";},onError:()=>{$("premium").disabled=false;statusEl.textContent="Status: Payment error";}
   });
@@ -100,10 +116,17 @@ $("premium").onclick=()=>{
 
 async function claimReward(){if(!accessToken||!storeReady)return;try{statusEl.textContent="Status: Verifying Triple Combo reward...";const data=await api("/api/a2u",{event:"triple_combo"});statusEl.textContent=`Status: ${data.amount} Test-π reward verified and sent ✅`;}catch(e){statusEl.textContent="Status: Reward not sent · "+e.message;}}
 
+function showGameOver(message="Status: Game over · restart this level"){
+  $("restart").hidden=false;
+  statusEl.textContent=message;
+  updateStats();
+}
+
 function initGame(restoreLives=false){
   const size=level===1?2:(level<=3?4:6),pairCount=(size*size)/2;
   if(!restoreLives) lives=premium?999:Math.min(5+(level-1),10);
   combo=0;selected=[];
+  $("restart").hidden=premium||lives>0;
   const deck=[...symbols.slice(0,pairCount),...symbols.slice(0,pairCount)].sort(()=>Math.random()-.5);
   cards=deck.map((value,id)=>({id,value,flipped:false,matched:false}));
   $("grid").style.gridTemplateColumns=`repeat(${size},1fr)`;$("grid").innerHTML="";
@@ -115,9 +138,16 @@ function flip(card,el){if(card.flipped||card.matched||selected.length===2||(!pre
 
 function checkMatch(){
   const[a,b]=selected;
-  if(a.value===b.value){a.matched=b.matched=true;combo++;if(!premium&&lives<10)lives++;score+=(premium?20:10)*combo;if(combo===3){$("combo").textContent="🔥 TRIPLE COMBO · VERIFYING 0.3 TEST-π";claimReward();}else $("combo").textContent=`COMBO X${combo}!`;if(cards.every(c=>c.matched)){level++;updateStats();saveProgress();setTimeout(()=>initGame(false),800);}}
-  else{combo=0;$("combo").textContent="";if(!premium)lives=Math.max(0,lives-1);$("grid").classList.add("shake");setTimeout(()=>$("grid").classList.remove("shake"),400);[a,b].forEach(c=>{c.flipped=false;c.el.classList.remove("flipped");c.el.textContent="";c.el.setAttribute("aria-label","Hidden card");});}
+  if(a.value===b.value){
+    a.matched=b.matched=true;combo++;if(!premium&&lives<10)lives++;score+=(premium?20:10)*combo;
+    if(combo===3){$("combo").textContent="🔥 TRIPLE COMBO · VERIFYING 0.3 TEST-π";claimReward();}else $("combo").textContent=`COMBO X${combo}!`;
+    if(cards.every(c=>c.matched)){level++;updateStats();saveProgress();setTimeout(()=>initGame(false),800);}
+  }else{
+    combo=0;$("combo").textContent="";if(!premium)lives=Math.max(0,lives-1);$("grid").classList.add("shake");setTimeout(()=>$("grid").classList.remove("shake"),400);
+    [a,b].forEach(c=>{c.flipped=false;c.el.classList.remove("flipped");c.el.textContent="";c.el.setAttribute("aria-label","Hidden card");});
+  }
   selected=[];updateStats();saveProgress();
+  if(!premium&&lives<=0) showGameOver();
 }
 
 function updateStats(){$("lvl").textContent=level;$("lives").textContent=premium?"∞":lives;$("score").textContent=score;}
