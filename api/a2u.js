@@ -53,8 +53,14 @@ module.exports = async function handler(req, res) {
     const destination = createData.to_address;
     if (!paymentId || !destination) return res.status(502).json({ error: "Pi returned an incomplete reward payment" });
 
+    // A2U payments may already be approved by Pi when they are created.
+    // Treat "already_approved" as an idempotent success and continue to the
+    // blockchain submission instead of aborting the reward flow.
     const approve = await piPost(`/payments/${encodeURIComponent(paymentId)}/approve`);
-    if (!approve.response.ok) return res.status(approve.response.status).json({ error: approve.data?.error || "Reward approval failed" });
+    const approveError = approve.data?.error;
+    if (!approve.response.ok && approveError !== "already_approved") {
+      return res.status(approve.response.status).json({ error: approveError || "Reward approval failed" });
+    }
 
     const server = new StellarSdk.Horizon.Server("https://api.testnet.minepi.com");
     const keypair = StellarSdk.Keypair.fromSecret(process.env.PI_APP_WALLET_SEED);
