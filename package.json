@@ -1,7 +1,5 @@
 {
-  "dependencies": {
-    "@stellar/stellar-sdk": "^14.5.0"
-  },
+  "private": true,
   "engines": {
     "node": ">=22"
   }
