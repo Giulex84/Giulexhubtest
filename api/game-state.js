@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const { bearerFromRequest, verifyAccessToken } = require("../lib/pi");
-const { getGameState, saveGameState, getDailyChallenge, saveDailyChallenge, isStoreConfigured } = require("../lib/store");
+const { getGameState, saveGameState, getDailyChallenge, saveDailyChallenge, acquireDailyLock, releaseDailyLock, isStoreConfigured } = require("../lib/store");
 
 const DAILY_SYMBOLS=["⚔","🔥","🛡","🏹","👑","💎"];
 const MAX_MOVES=18;
@@ -23,6 +23,9 @@ module.exports=async function handler(req,res){
       return res.status(200).json({daily:publicDaily(daily)});
     }
     if(action==="daily-flip"){
+      const lockId=await acquireDailyLock(user.uid,day);
+      try{
+      daily=await getDailyChallenge(user.uid,day);
       if(!daily)return res.status(409).json({error:"Start today's challenge first"});
       if(daily.status!=="active")return res.status(200).json({daily:publicDaily(daily)});
       const index=Number(req.body?.index);
@@ -36,6 +39,7 @@ module.exports=async function handler(req,res){
       else if(daily.moves>=MAX_MOVES){daily.status="failed";daily.completedAt=new Date().toISOString();}
       await saveDailyChallenge(user.uid,day,daily);
       return res.status(200).json({daily:publicDaily(daily),reveal:{index,value,firstIndex,firstValue,matched,pending:false}});
+      }finally{await releaseDailyLock(user.uid,day,lockId);}
     }
     return res.status(400).json({error:"Unknown action"});
   }catch(error){return res.status(error?.message==="Unauthorized"?401:500).json({error:error?.message||"Request failed"});}
