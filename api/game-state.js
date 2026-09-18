@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const { bearerFromRequest, verifyAccessToken } = require("../lib/pi");
-const { getGameState, saveGameState, getDailyChallenge, saveDailyChallenge, acquireDailyLock, releaseDailyLock, isStoreConfigured } = require("../lib/store");
+const { getGameState, saveGameState, getDailyChallenge, saveDailyChallenge, acquireDailyLock, releaseDailyLock, getReplayCredits, consumeReplayCredit, isStoreConfigured } = require("../lib/store");
 
 const DAILY_SYMBOLS=["⚔","🔥","🛡","🏹","👑","💎"];
 const MAX_MOVES=18;
@@ -21,6 +21,10 @@ module.exports=async function handler(req,res){
     if(action==="daily-start"||action==="daily-status"){
       if(!daily){daily={day,deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),matched:[],firstIndex:null,moves:0,score:0,status:"active",startedAt:new Date().toISOString()};await saveDailyChallenge(user.uid,day,daily);}
       return res.status(200).json({daily:publicDaily(daily)});
+    }
+    if(action==="daily-reset"){
+      const lockId=await acquireDailyLock(user.uid,day);
+      try{const replayCredits=await consumeReplayCredit(user.uid);daily={day,deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),matched:[],firstIndex:null,moves:0,score:0,status:"active",startedAt:new Date().toISOString(),replay:true};await saveDailyChallenge(user.uid,day,daily);return res.status(200).json({daily:publicDaily(daily),replayCredits});}finally{await releaseDailyLock(user.uid,day,lockId);}
     }
     if(action==="daily-flip"){
       const lockId=await acquireDailyLock(user.uid,day);
