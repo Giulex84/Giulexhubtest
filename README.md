@@ -9,6 +9,7 @@ Arena Test is the Testnet development build for Arena. It uses `Pi.init({ versio
 - Daily Arena: 12 cards, 18-move limit, one persistent challenge per verified Pi UID and UTC day
 - Daily deck, revealed cards, matches, move count and result are controlled by the backend
 - Premium unlock: exactly 1 Test-Pi, approved/completed server-side and persisted by verified Pi UID
+- Daily Replay Ticket: exactly 0.1 Test-Pi, a repeatable consumable that creates one additional server-controlled challenge for the current UTC day
 - Test-Pi gameplay rewards are disabled while the new challenge model is evaluated
 - No Mainnet payment, key or wallet seed is used by this repository
 
@@ -17,6 +18,8 @@ Arena Test is the Testnet development build for Arena. It uses `Pi.init({ versio
 Classic mode remains a casual progression mode: its score is calculated in the browser and must not be used for prizes or a competitive leaderboard. Daily Arena is the server-validated foundation for future leaderboards and asynchronous PvP. Daily results award gameplay points only and never Pi.
 
 The backend validates Pi access tokens and never accepts a client-supplied UID as identity. Premium is granted only after the payment matches the fixed Testnet network, amount, memo, product and authenticated Pi UID, and Pi reports developer completion plus transaction verification.
+
+Replay Tickets use the same verification lifecycle. Each verified payment identifier can grant exactly one ticket, and consuming a ticket is serialized with the Daily Arena lock to prevent duplicate resets.
 
 ## Environment variables
 
@@ -39,7 +42,9 @@ All Testnet records use the `arena:test:*` namespace. Mainnet uses the separate 
 5. Confirm the Daily challenge stops after completion or 18 moves.
 6. Confirm Daily results do not create an A2U payment.
 7. Confirm Premium costs exactly 1 Test-Pi and persists after reopening.
-8. Interrupt one Premium payment and confirm recovery does not duplicate fulfillment.
-9. Confirm Privacy, Terms and validation key are publicly reachable.
+8. Buy a 0.1 Test-Pi Daily Replay Ticket, consume it after a completed challenge, and confirm a new deck is created.
+9. Confirm reusing or recovering the same payment does not create a second ticket.
+10. Interrupt one payment and confirm recovery does not duplicate fulfillment.
+11. Confirm Privacy, Terms and validation key are publicly reachable.
 
 Test-Pi has no real-world value. Arena Test is not an investment, gambling or earning product.
