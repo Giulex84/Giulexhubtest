@@ -1,12 +1,15 @@
 const crypto = require("crypto");
 const { bearerFromRequest, arenaSessionFromRequest, verifyArenaSession, verifyAccessToken } = require("../lib/pi");
-const { getGameState, saveGameState, getDailyChallenge, saveDailyChallenge, acquireDailyLock, releaseDailyLock, getReplayCredits, consumeReplayCredit, recordDailyAttempt, recordDailyResult, getDailyMeta, getDailyLeaderboard, isStoreConfigured } = require("../lib/store");
+const { getGameState, saveGameState, getDailyChallenge, saveDailyChallenge, acquireDailyLock, releaseDailyLock, getReplayCredits, consumeReplayCredit, recordDailyAttempt, recordDailyResult, getDailyMeta, getDailyLeaderboard, getPvpMatch, savePvpMatch, getUserPvpMatch, setUserPvpMatch, clearUserPvpMatch, getPvpQueue, setPvpQueue, clearPvpQueue, acquirePvpLock, releasePvpLock, acquirePvpMatchLock, releasePvpMatchLock, isStoreConfigured } = require("../lib/store");
 
 const DAILY_SYMBOLS=["⚔","🔥","🛡","🏹","👑","💎"];
 const MAX_MOVES=18;
 const today=()=>new Date().toISOString().slice(0,10);
 function shuffle(values){const a=[...values];for(let i=a.length-1;i>0;i--){const j=crypto.randomInt(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
 function publicDaily(s){const matchedValues={};for(const i of s.matched)matchedValues[i]=s.deck[i];return{day:s.day,status:s.status,moves:s.moves,maxMoves:MAX_MOVES,matches:s.matched.length/2,matched:s.matched,matchedValues,firstIndex:s.firstIndex,firstValue:s.firstIndex===null?null:s.deck[s.firstIndex],score:s.score};}
+function newPvpPlayer(uid,username,bot=false){return{uid,username:username||"Pioneer",bot,matched:[],firstIndex:null,moves:0,score:0,status:bot?"completed":"active"};}
+function comparePvp(a,b){if(a.status==="completed"&&b.status!=="completed")return 1;if(b.status==="completed"&&a.status!=="completed")return-1;if(a.moves!==b.moves)return a.moves<b.moves?1:-1;if(a.score!==b.score)return a.score>b.score?1:-1;return 0;}
+function publicPvp(match,uid){if(!match)return null;const own=match.players.find(p=>p.uid===uid),opponent=match.players.find(p=>p.uid!==uid);if(!own)return null;const matchedValues={};for(const i of own.matched)matchedValues[i]=match.deck[i];const bothDone=opponent&&own.status!=="active"&&opponent.status!=="active",comparison=bothDone?comparePvp(own,opponent):null;return{id:match.id,status:match.status,maxMoves:MAX_MOVES,own:{status:own.status,moves:own.moves,score:own.score,matched:own.matched,matchedValues,firstIndex:own.firstIndex,firstValue:own.firstIndex===null?null:match.deck[own.firstIndex]},opponent:opponent?{username:opponent.username,bot:Boolean(opponent.bot),status:opponent.status,moves:opponent.moves,score:opponent.score}:null,result:comparison===null?null:comparison>0?"win":comparison<0?"loss":"draw"};}
 
 module.exports=async function handler(req,res){
   res.setHeader("Cache-Control","no-store");
@@ -48,6 +51,22 @@ module.exports=async function handler(req,res){
       const meta=daily.status==="completed"?{attempts:(await getDailyMeta(user.uid,day)).attempts,best:await recordDailyResult(user.uid,day,daily)}:null;
       return res.status(200).json({daily:publicDaily(daily),meta,reveal:{index,value,firstIndex,firstValue,matched,pending:false}});
       }finally{await releaseDailyLock(user.uid,day,lockId);}
+    }
+    if(action==="pvp-status")return res.status(200).json({pvp:publicPvp(await getUserPvpMatch(user.uid),user.uid)});
+    if(action==="pvp-start"){
+      const lockId=await acquirePvpLock();
+      try{
+        const existing=await getUserPvpMatch(user.uid);if(existing&&["waiting","active"].includes(existing.status))return res.status(200).json({pvp:publicPvp(existing,user.uid)});if(existing)await clearUserPvpMatch(user.uid);
+        const queued=await getPvpQueue();
+        if(queued&&queued.uid!==user.uid){const match=await getPvpMatch(queued.matchId);if(match&&match.status==="waiting"){match.players.push(newPvpPlayer(user.uid,user.username));match.status="active";match.matchedAt=new Date().toISOString();await savePvpMatch(match);await setUserPvpMatch(user.uid,match.id);await clearPvpQueue(match.id);return res.status(200).json({pvp:publicPvp(match,user.uid)});}await clearPvpQueue(queued.matchId);}
+        const match={id:crypto.randomUUID(),status:"waiting",deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),players:[newPvpPlayer(user.uid,user.username)],createdAt:new Date().toISOString()};await savePvpMatch(match);await setUserPvpMatch(user.uid,match.id);await setPvpQueue({uid:user.uid,matchId:match.id});return res.status(200).json({pvp:publicPvp(match,user.uid)});
+      }finally{await releasePvpLock(lockId);}
+    }
+    if(action==="pvp-bot"){
+      const match=await getUserPvpMatch(user.uid);if(!match||match.status!=="waiting")return res.status(409).json({error:"No waiting PvP match"});const lockId=await acquirePvpMatchLock(match.id);try{const fresh=await getPvpMatch(match.id);if(fresh.status!=="waiting")return res.status(200).json({pvp:publicPvp(fresh,user.uid)});const botMoves=12+crypto.randomInt(7),bot=newPvpPlayer(`bot:${fresh.id}`,"Arena Bot",true);bot.moves=botMoves;bot.score=Math.max(100,900-botMoves*25);fresh.players.push(bot);fresh.status="active";fresh.matchedAt=new Date().toISOString();await savePvpMatch(fresh);await clearPvpQueue(fresh.id);return res.status(200).json({pvp:publicPvp(fresh,user.uid)});}finally{await releasePvpMatchLock(match.id,lockId);}
+    }
+    if(action==="pvp-flip"){
+      const current=await getUserPvpMatch(user.uid);if(!current)return res.status(409).json({error:"Start a PvP match first"});if(current.status==="waiting")return res.status(409).json({error:"Waiting for an opponent or choose Arena Bot"});const lockId=await acquirePvpMatchLock(current.id);try{const match=await getPvpMatch(current.id),player=match?.players.find(p=>p.uid===user.uid);if(!match||!player)return res.status(404).json({error:"PvP match not found"});if(player.status!=="active")return res.status(200).json({pvp:publicPvp(match,user.uid)});const index=Number(req.body?.index);if(!Number.isInteger(index)||index<0||index>=match.deck.length)return res.status(400).json({error:"Invalid card"});if(player.matched.includes(index)||player.firstIndex===index)return res.status(409).json({error:"Card is already visible"});const value=match.deck[index];if(player.firstIndex===null){player.firstIndex=index;await savePvpMatch(match);return res.status(200).json({pvp:publicPvp(match,user.uid),reveal:{index,value,pending:true}});}const firstIndex=player.firstIndex,firstValue=match.deck[firstIndex],matched=firstValue===value;player.firstIndex=null;player.moves+=1;if(matched){player.matched.push(firstIndex,index);player.score+=Math.max(20,120-player.moves*4);}if(player.matched.length===match.deck.length){player.status="completed";player.score+=Math.max(0,(MAX_MOVES-player.moves)*25);}else if(player.moves>=MAX_MOVES)player.status="failed";if(match.players.length===2&&match.players.every(p=>p.status!=="active"))match.status="completed";await savePvpMatch(match);return res.status(200).json({pvp:publicPvp(match,user.uid),reveal:{index,value,firstIndex,firstValue,matched,pending:false}});}finally{await releasePvpMatchLock(current.id,lockId);}
     }
     return res.status(400).json({error:"Unknown action"});
   }catch(error){return res.status(error?.message==="Unauthorized"?401:500).json({error:error?.message||"Request failed"});}
