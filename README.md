@@ -9,6 +9,7 @@ Arena Test is the Testnet development build for Arena. It uses `Pi.init({ versio
 - Classic memory mode with server-side progress persistence
 - Daily Arena: 12 cards, 18-move limit, one persistent challenge per verified Pi UID and UTC day
 - Server-verified daily attempt count, personal best and Top 10 leaderboard
+- Asynchronous PvP Testnet: server-controlled shared deck, real-opponent matchmaking and a clearly identified Arena Bot fallback
 - Daily deck, revealed cards, matches, move count and result are controlled by the backend
 - Premium unlock: exactly 1 Test-Pi, approved/completed server-side and persisted by verified Pi UID
 - Daily Replay Ticket: exactly 0.1 Test-Pi, a repeatable consumable that creates one additional server-controlled challenge for the current UTC day
@@ -20,6 +21,12 @@ Arena Test is the Testnet development build for Arena. It uses `Pi.init({ versio
 Classic mode remains a casual progression mode: its score is calculated in the browser and must not be used for prizes or a competitive leaderboard. Daily Arena is the server-validated foundation for future leaderboards and asynchronous PvP. Daily results award gameplay points only and never Pi.
 
 Daily ranking prioritizes a completed challenge with fewer moves; when moves are equal, the higher score ranks first. Only server-completed Daily Arena results can enter the leaderboard. Authorized Pi usernames are displayed in the daily Top 10.
+
+## Async PvP
+
+PvP opponents play the same 12-card server-controlled deck. The winner is the player who completes it in fewer moves; score breaks a tie. Match state is persisted for 48 hours so real opponents do not need to be online simultaneously. A waiting player may explicitly choose the disclosed `Arena Bot`; bot results are generated server-side and are always labelled as bot play. PvP has no entry fee, Pi payout or purchasable competitive advantage.
+
+Classic difficulty is capped at 20 cards from level 4 onward instead of jumping from 16 to 36 cards, keeping the mobile board readable.
 
 The backend validates Pi access tokens and never accepts a client-supplied UID as identity. Premium is granted only after the payment matches the fixed Testnet network, amount, memo, product and authenticated Pi UID, and Pi reports developer completion plus transaction verification.
 
@@ -54,5 +61,8 @@ All Testnet records use the `arena:test:*` namespace. Mainnet uses the separate 
 11. Confirm reusing or recovering the same payment does not create a second ticket.
 12. Interrupt one payment and confirm recovery does not duplicate fulfillment.
 13. Confirm Privacy, Terms and validation key are publicly reachable.
+14. Start PvP on two Pi accounts and confirm both receive the same deck.
+15. Complete both sides and confirm fewer moves wins, with score as tie-breaker.
+16. Start another match, choose Arena Bot, and confirm the opponent is visibly labelled as a bot.
 
 Test-Pi has no real-world value. Arena Test is not an investment, gambling or earning product.
