@@ -11,6 +11,36 @@ function newPvpPlayer(uid,username,bot=false){return{uid,username:username||"Pio
 function comparePvp(a,b){if(a.status==="completed"&&b.status!=="completed")return 1;if(b.status==="completed"&&a.status!=="completed")return-1;if(a.moves!==b.moves)return a.moves<b.moves?1:-1;if(a.score!==b.score)return a.score>b.score?1:-1;return 0;}
 function publicPvp(match,uid){if(!match)return null;const own=match.players.find(p=>p.uid===uid),opponent=match.players.find(p=>p.uid!==uid);if(!own)return null;const matchedValues={};for(const i of own.matched)matchedValues[i]=match.deck[i];const bothDone=opponent&&own.status!=="active"&&opponent.status!=="active",comparison=bothDone?comparePvp(own,opponent):null;return{id:match.id,status:match.status,maxMoves:MAX_MOVES,own:{status:own.status,moves:own.moves,score:own.score,matched:own.matched,matchedValues,firstIndex:own.firstIndex,firstValue:own.firstIndex===null?null:match.deck[own.firstIndex]},opponent:opponent?{username:opponent.username,bot:Boolean(opponent.bot),status:opponent.status,moves:opponent.moves,score:opponent.score}:null,result:comparison===null?null:comparison>0?"win":comparison<0?"loss":"draw"};}
 
+async function reconcileWaitingPvp(user,existing){
+  let lockId;
+  try{lockId=await acquirePvpLock();}
+  catch(error){if(error?.message==="Matchmaking is busy. Retry shortly.")return existing;throw error;}
+  try{
+    const current=await getUserPvpMatch(user.uid);
+    if(current&&current.status!=="waiting")return current;
+    const own=current||existing;
+    const queued=await getPvpQueue();
+    if(queued&&queued.uid!==user.uid){
+      const target=await getPvpMatch(queued.matchId);
+      if(target&&target.status==="waiting"&&target.players.length===1&&target.players[0].uid!==user.uid){
+        target.players.push(newPvpPlayer(user.uid,user.username));
+        target.status="active";
+        target.matchedAt=new Date().toISOString();
+        await savePvpMatch(target);
+        await setUserPvpMatch(user.uid,target.id);
+        await clearPvpQueue(target.id);
+        return target;
+      }
+      await clearPvpQueue(queued.matchId);
+    }
+    if(own&&own.status==="waiting"){
+      await setPvpQueue({uid:user.uid,matchId:own.id});
+      return own;
+    }
+    return null;
+  }finally{await releasePvpLock(lockId);}
+}
+
 module.exports=async function handler(req,res){
   res.setHeader("Cache-Control","no-store");
   if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
@@ -52,11 +82,18 @@ module.exports=async function handler(req,res){
       return res.status(200).json({daily:publicDaily(daily),meta,reveal:{index,value,firstIndex,firstValue,matched,pending:false}});
       }finally{await releaseDailyLock(user.uid,day,lockId);}
     }
-    if(action==="pvp-status")return res.status(200).json({pvp:publicPvp(await getUserPvpMatch(user.uid),user.uid)});
+    if(action==="pvp-status"){
+      let match=await getUserPvpMatch(user.uid);
+      if(match?.status==="waiting")match=await reconcileWaitingPvp(user,match);
+      return res.status(200).json({pvp:publicPvp(match,user.uid)});
+    }
     if(action==="pvp-start"){
+      const existing=await getUserPvpMatch(user.uid);
+      if(existing?.status==="waiting")return res.status(200).json({pvp:publicPvp(await reconcileWaitingPvp(user,existing),user.uid)});
+      if(existing?.status==="active")return res.status(200).json({pvp:publicPvp(existing,user.uid)});
+      if(existing)await clearUserPvpMatch(user.uid);
       const lockId=await acquirePvpLock();
       try{
-        const existing=await getUserPvpMatch(user.uid);if(existing&&["waiting","active"].includes(existing.status))return res.status(200).json({pvp:publicPvp(existing,user.uid)});if(existing)await clearUserPvpMatch(user.uid);
         const queued=await getPvpQueue();
         if(queued&&queued.uid!==user.uid){const match=await getPvpMatch(queued.matchId);if(match&&match.status==="waiting"){match.players.push(newPvpPlayer(user.uid,user.username));match.status="active";match.matchedAt=new Date().toISOString();await savePvpMatch(match);await setUserPvpMatch(user.uid,match.id);await clearPvpQueue(match.id);return res.status(200).json({pvp:publicPvp(match,user.uid)});}await clearPvpQueue(queued.matchId);}
         const match={id:crypto.randomUUID(),status:"waiting",deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),players:[newPvpPlayer(user.uid,user.username)],createdAt:new Date().toISOString()};await savePvpMatch(match);await setUserPvpMatch(user.uid,match.id);await setPvpQueue({uid:user.uid,matchId:match.id});return res.status(200).json({pvp:publicPvp(match,user.uid)});
