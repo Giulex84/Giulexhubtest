@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const { bearerFromRequest, arenaSessionFromRequest, verifyArenaSession, verifyAccessToken } = require("../lib/pi");
-const { getGameState, saveGameState, getDailyChallenge, saveDailyChallenge, acquireDailyLock, releaseDailyLock, getReplayCredits, consumeReplayCredit, isStoreConfigured } = require("../lib/store");
+const { getGameState, saveGameState, getDailyChallenge, saveDailyChallenge, acquireDailyLock, releaseDailyLock, getReplayCredits, consumeReplayCredit, recordDailyAttempt, recordDailyResult, getDailyMeta, getDailyLeaderboard, isStoreConfigured } = require("../lib/store");
 
 const DAILY_SYMBOLS=["⚔","🔥","🛡","🏹","👑","💎"];
 const MAX_MOVES=18;
@@ -18,14 +18,16 @@ module.exports=async function handler(req,res){
     if(action==="load")return res.status(200).json({state:await getGameState(user.uid)});
     if(action==="save")return res.status(200).json({ok:true,state:await saveGameState(user.uid,req.body?.state||{})});
     const day=today();
+    if(action==="daily-leaderboard")return res.status(200).json(await getDailyLeaderboard(user.uid,day));
     if(action==="daily-start"||action==="daily-status"){
       let daily=await getDailyChallenge(user.uid,day);
-      if(!daily){daily={day,deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),matched:[],firstIndex:null,moves:0,score:0,status:"active",startedAt:new Date().toISOString()};await saveDailyChallenge(user.uid,day,daily);}
-      return res.status(200).json({daily:publicDaily(daily)});
+      if(!daily){daily={day,deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),matched:[],firstIndex:null,moves:0,score:0,status:"active",startedAt:new Date().toISOString()};await saveDailyChallenge(user.uid,day,daily);await recordDailyAttempt(user.uid,day);}
+      let meta=await getDailyMeta(user.uid,day);if(meta.attempts<1){await recordDailyAttempt(user.uid,day);meta=await getDailyMeta(user.uid,day);}if(daily.status==="completed"&&!meta.best){meta.best=await recordDailyResult(user.uid,day,daily);}
+      return res.status(200).json({daily:publicDaily(daily),meta});
     }
     if(action==="daily-reset"){
       const lockId=await acquireDailyLock(user.uid,day);
-      try{const replayCredits=await consumeReplayCredit(user.uid),daily={day,deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),matched:[],firstIndex:null,moves:0,score:0,status:"active",startedAt:new Date().toISOString(),replay:true};await saveDailyChallenge(user.uid,day,daily);return res.status(200).json({daily:publicDaily(daily),replayCredits});}finally{await releaseDailyLock(user.uid,day,lockId);}
+      try{const replayCredits=await consumeReplayCredit(user.uid),daily={day,deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),matched:[],firstIndex:null,moves:0,score:0,status:"active",startedAt:new Date().toISOString(),replay:true};await saveDailyChallenge(user.uid,day,daily);await recordDailyAttempt(user.uid,day);return res.status(200).json({daily:publicDaily(daily),replayCredits,meta:await getDailyMeta(user.uid,day)});}finally{await releaseDailyLock(user.uid,day,lockId);}
     }
     if(action==="daily-flip"){
       const lockId=await acquireDailyLock(user.uid,day);
@@ -43,7 +45,8 @@ module.exports=async function handler(req,res){
       if(daily.matched.length===daily.deck.length){daily.status="completed";daily.score+=Math.max(0,(MAX_MOVES-daily.moves)*25);daily.completedAt=new Date().toISOString();}
       else if(daily.moves>=MAX_MOVES){daily.status="failed";daily.completedAt=new Date().toISOString();}
       await saveDailyChallenge(user.uid,day,daily);
-      return res.status(200).json({daily:publicDaily(daily),reveal:{index,value,firstIndex,firstValue,matched,pending:false}});
+      const meta=daily.status==="completed"?{attempts:(await getDailyMeta(user.uid,day)).attempts,best:await recordDailyResult(user.uid,day,daily)}:null;
+      return res.status(200).json({daily:publicDaily(daily),meta,reveal:{index,value,firstIndex,firstValue,matched,pending:false}});
       }finally{await releaseDailyLock(user.uid,day,lockId);}
     }
     return res.status(400).json({error:"Unknown action"});
