@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { bearerFromRequest, verifyAccessToken } = require("../lib/pi");
+const { bearerFromRequest, arenaSessionFromRequest, verifyArenaSession, verifyAccessToken } = require("../lib/pi");
 const { getGameState, saveGameState, getDailyChallenge, saveDailyChallenge, acquireDailyLock, releaseDailyLock, getReplayCredits, consumeReplayCredit, isStoreConfigured } = require("../lib/store");
 
 const DAILY_SYMBOLS=["⚔","🔥","🛡","🏹","👑","💎"];
@@ -11,25 +11,26 @@ function publicDaily(s){const matchedValues={};for(const i of s.matched)matchedV
 module.exports=async function handler(req,res){
   res.setHeader("Cache-Control","no-store");
   if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
-  const token=bearerFromRequest(req);if(!token)return res.status(401).json({error:"Missing Pi access token"});
+  const sessionToken=arenaSessionFromRequest(req),token=bearerFromRequest(req);if(!sessionToken&&!token)return res.status(401).json({error:"Missing Arena session"});
   if(!isStoreConfigured())return res.status(503).json({error:"Persistent store is not configured"});
   try{
-    const user=await verifyAccessToken(token),action=req.body?.action||"load";
+    const user=sessionToken?verifyArenaSession(sessionToken):await verifyAccessToken(token),action=req.body?.action||"load";
     if(action==="load")return res.status(200).json({state:await getGameState(user.uid)});
     if(action==="save")return res.status(200).json({ok:true,state:await saveGameState(user.uid,req.body?.state||{})});
-    const day=today();let daily=await getDailyChallenge(user.uid,day);
+    const day=today();
     if(action==="daily-start"||action==="daily-status"){
+      let daily=await getDailyChallenge(user.uid,day);
       if(!daily){daily={day,deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),matched:[],firstIndex:null,moves:0,score:0,status:"active",startedAt:new Date().toISOString()};await saveDailyChallenge(user.uid,day,daily);}
       return res.status(200).json({daily:publicDaily(daily)});
     }
     if(action==="daily-reset"){
       const lockId=await acquireDailyLock(user.uid,day);
-      try{const replayCredits=await consumeReplayCredit(user.uid);daily={day,deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),matched:[],firstIndex:null,moves:0,score:0,status:"active",startedAt:new Date().toISOString(),replay:true};await saveDailyChallenge(user.uid,day,daily);return res.status(200).json({daily:publicDaily(daily),replayCredits});}finally{await releaseDailyLock(user.uid,day,lockId);}
+      try{const replayCredits=await consumeReplayCredit(user.uid),daily={day,deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),matched:[],firstIndex:null,moves:0,score:0,status:"active",startedAt:new Date().toISOString(),replay:true};await saveDailyChallenge(user.uid,day,daily);return res.status(200).json({daily:publicDaily(daily),replayCredits});}finally{await releaseDailyLock(user.uid,day,lockId);}
     }
     if(action==="daily-flip"){
       const lockId=await acquireDailyLock(user.uid,day);
       try{
-      daily=await getDailyChallenge(user.uid,day);
+      const daily=await getDailyChallenge(user.uid,day);
       if(!daily)return res.status(409).json({error:"Start today's challenge first"});
       if(daily.status!=="active")return res.status(200).json({daily:publicDaily(daily)});
       const index=Number(req.body?.index);
