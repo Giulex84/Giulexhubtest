@@ -5,6 +5,7 @@ Arena Test is the Testnet development build for Arena. It uses `Pi.init({ versio
 ## Current release
 
 - Pi SDK authentication with server verification through `/v2/me`
+- Short-lived HMAC-signed Arena sessions after `/v2/me` verification, avoiding a Pi API round trip for every card flip
 - Classic memory mode with server-side progress persistence
 - Daily Arena: 12 cards, 18-move limit, one persistent challenge per verified Pi UID and UTC day
 - Daily deck, revealed cards, matches, move count and result are controlled by the backend
@@ -18,6 +19,8 @@ Arena Test is the Testnet development build for Arena. It uses `Pi.init({ versio
 Classic mode remains a casual progression mode: its score is calculated in the browser and must not be used for prizes or a competitive leaderboard. Daily Arena is the server-validated foundation for future leaderboards and asynchronous PvP. Daily results award gameplay points only and never Pi.
 
 The backend validates Pi access tokens and never accepts a client-supplied UID as identity. Premium is granted only after the payment matches the fixed Testnet network, amount, memo, product and authenticated Pi UID, and Pi reports developer completion plus transaction verification.
+
+The Arena session contains only the verified app UID and an expiry time. It is signed server-side with a key derived from the server-only Pi API key, expires after six hours and cannot be altered by the browser. Payments continue to require the original Pi access token and full payment verification.
 
 Replay Tickets use the same verification lifecycle. Each verified payment identifier can grant exactly one ticket, and consuming a ticket is serialized with the Daily Arena lock to prevent duplicate resets.
 
