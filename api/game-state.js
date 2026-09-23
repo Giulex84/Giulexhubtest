@@ -52,11 +52,14 @@ module.exports=async function handler(req,res){
     if(action==="save")return res.status(200).json({ok:true,state:await saveGameState(user.uid,req.body?.state||{})});
     const day=today();
     if(action==="daily-leaderboard")return res.status(200).json(await getDailyLeaderboard(user.uid,day));
-    if(action==="daily-start"||action==="daily-status"){
+    if(action==="daily-status"){
       let daily=await getDailyChallenge(user.uid,day);
-      if(!daily){daily={day,deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),matched:[],firstIndex:null,moves:0,score:0,status:"active",startedAt:new Date().toISOString()};await saveDailyChallenge(user.uid,day,daily);await recordDailyAttempt(user.uid,day);}
-      let meta=await getDailyMeta(user.uid,day);if(meta.attempts<1){await recordDailyAttempt(user.uid,day);meta=await getDailyMeta(user.uid,day);}if(daily.status==="completed"&&!meta.best){meta.best=await recordDailyResult(user.uid,day,daily);}
-      return res.status(200).json({daily:publicDaily(daily),meta});
+      const meta=await getDailyMeta(user.uid,day);if(daily?.status==="completed"&&!meta.best)meta.best=await recordDailyResult(user.uid,day,daily);
+      return res.status(200).json({daily:daily?publicDaily(daily):null,meta});
+    }
+    if(action==="daily-start"){
+      const lockId=await acquireDailyLock(user.uid,day);
+      try{let daily=await getDailyChallenge(user.uid,day);if(!daily){daily={day,deck:shuffle([...DAILY_SYMBOLS,...DAILY_SYMBOLS]),matched:[],firstIndex:null,moves:0,score:0,status:"active",startedAt:new Date().toISOString()};await saveDailyChallenge(user.uid,day,daily);await recordDailyAttempt(user.uid,day);}return res.status(200).json({daily:publicDaily(daily),meta:await getDailyMeta(user.uid,day)});}finally{await releaseDailyLock(user.uid,day,lockId);}
     }
     if(action==="daily-reset"){
       const lockId=await acquireDailyLock(user.uid,day);

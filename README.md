@@ -8,6 +8,7 @@ Arena Test is the Testnet development build for Arena. It uses `Pi.init({ versio
 - Short-lived HMAC-signed Arena sessions after `/v2/me` verification, avoiding a Pi API round trip for every card flip
 - Classic memory mode with server-side progress persistence
 - Daily Arena: 12 cards, 18-move limit, one persistent challenge per verified Pi UID and UTC day
+- A Daily attempt starts only after the Pioneer explicitly presses Start; opening the Daily tab only restores an existing Testnet attempt. The interface shows pair progress and preserves same-day resume.
 - Server-verified daily attempt count, personal best and Top 10 leaderboard
 - Asynchronous PvP Testnet: server-controlled shared deck, real-opponent matchmaking and a clearly identified Arena Bot fallback
 - Daily deck, revealed cards, matches, move count and result are controlled by the backend
