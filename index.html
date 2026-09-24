@@ -455,6 +455,9 @@
               style="grid-template-columns: repeat(4, 1fr)"
             ></div>
             <button id="startPvp" class="action">FIND AN OPPONENT</button
+            ><button id="rematchPvp" class="action secondary hidden">
+              REMATCH
+            </button
             ><button id="botPvp" class="action secondary hidden">
               PLAY ARENA BOT
             </button>
@@ -507,6 +510,8 @@
         dailyMeta = { attempts: 0, best: null },
         dailyVisible = {},
         dailyBusy = false,
+        dailyLoading = false,
+        dailyLoadId = 0,
         dailyPendingIndex = null,
         paymentBusy = false,
         pvpState = null,
@@ -732,8 +737,12 @@
       $("dailyTab").onclick = () => showTab("daily");
       $("pvpTab").onclick = () => showTab("pvp");
       async function loadDaily() {
+        const requestId = ++dailyLoadId;
+        dailyLoading = true;
+        renderDaily();
         try {
           const d = await api("/api/game-state", { action: "daily-status" });
+          if (requestId !== dailyLoadId) return;
           dailyState = d.daily;
           dailyMeta = d.meta || dailyMeta;
           dailyVisible = {};
@@ -742,11 +751,18 @@
           renderDaily();
           await loadLeaderboard();
         } catch (e) {
-          setStatus(e.message);
+          if (requestId === dailyLoadId) setStatus(e.message);
+        } finally {
+          if (requestId === dailyLoadId) {
+            dailyLoading = false;
+            renderDaily();
+          }
         }
       }
       $("startDaily").onclick = async () => {
-        if (dailyBusy) return;
+        if (dailyBusy || dailyLoading) return;
+        ++dailyLoadId;
+        dailyLoading = false;
         dailyBusy = true;
         $("startDaily").disabled = true;
         $("startDaily").textContent = "STARTING…";
@@ -772,6 +788,12 @@
           : "—";
         if (!dailyState) {
           $("startDaily").classList.remove("hidden");
+          $("startDaily").disabled = dailyBusy || dailyLoading;
+          $("startDaily").textContent = dailyLoading
+            ? "LOADING DAILY…"
+            : dailyBusy
+              ? "STARTING…"
+              : "START DAILY ARENA";
           $("dailyGrid").innerHTML = "";
           $("dailyProgress").style.width = "0%";
           $("dailyResult").classList.add("hidden");
@@ -792,7 +814,7 @@
             (value || pending ? " flipped" : "") +
             (matched ? " matched" : "");
           b.textContent = pending ? "…" : value || "";
-          b.disabled = dailyBusy || matched || dailyState.status !== "active";
+          b.disabled = dailyBusy || dailyLoading || matched || dailyState.status !== "active";
           b.onclick = () => dailyFlip(i);
           $("dailyGrid").appendChild(b);
         }
@@ -806,7 +828,7 @@
               : `Move limit reached · ${dailyState.matches}/6 pairs`;
       }
       async function dailyFlip(index) {
-        if (dailyBusy) return;
+        if (dailyBusy || dailyLoading) return;
         dailyBusy = true;
         dailyPendingIndex = index;
         renderDaily();
@@ -957,7 +979,8 @@
         if (
           pvpState &&
           (pvpState.status === "waiting" ||
-            (pvpState.status === "active" && pvpState.own.status !== "active"))
+            (pvpState.status === "active" && pvpState.own.status !== "active") ||
+            pvpState.own.rematchRequested)
         )
           pvpPoll = setTimeout(loadPvp, 3000);
       }
@@ -969,6 +992,7 @@
           $("pvpMoves").textContent = "0 / 18";
           $("startPvp").classList.remove("hidden");
           $("startPvp").textContent = "FIND AN OPPONENT";
+          $("rematchPvp").classList.add("hidden");
           $("botPvp").classList.add("hidden");
           $("pvpResult").classList.add("hidden");
           return;
@@ -998,9 +1022,15 @@
           grid.appendChild(b);
         }
         $("botPvp").classList.toggle("hidden", pvpState.status !== "waiting");
-        const finished = pvpState.status === "completed";
+        const finished = own.status !== "active";
         $("startPvp").classList.toggle("hidden", !finished);
-        $("startPvp").textContent = "START A NEW DUEL";
+        $("startPvp").textContent = "NEW OPPONENT";
+        const canRematch = finished && opponent && !opponent.bot;
+        $("rematchPvp").classList.toggle("hidden", !canRematch);
+        $("rematchPvp").disabled = pvpBusy || own.rematchRequested;
+        $("rematchPvp").textContent = own.rematchRequested
+          ? "REMATCH REQUESTED…"
+          : "REMATCH";
         $("pvpResult").classList.toggle("hidden", !pvpState.result);
         if (pvpState.result)
           $("pvpResult").textContent =
@@ -1042,6 +1072,27 @@
         } finally {
           pvpBusy = false;
           renderPvp();
+        }
+      };
+      $("rematchPvp").onclick = async () => {
+        if (pvpBusy || !pvpState || pvpState.own.status === "active") return;
+        pvpBusy = true;
+        renderPvp();
+        try {
+          const d = await api("/api/game-state", { action: "pvp-rematch" });
+          pvpState = d.pvp;
+          pvpVisible = {};
+          setStatus(
+            d.rematchStarted
+              ? "Rematch accepted · new duel ready"
+              : "Rematch requested · waiting for your opponent",
+          );
+        } catch (e) {
+          setStatus(e.message);
+        } finally {
+          pvpBusy = false;
+          renderPvp();
+          schedulePvpPoll();
         }
       };
       async function pvpFlip(index) {
