@@ -266,6 +266,9 @@
         color: var(--muted);
         font-size: 0.72rem;
       }
+      .daily-meta span:last-child {
+        grid-column: 1 / -1;
+      }
       .daily-meta b {
         display: block;
         color: #fff;
@@ -422,8 +425,10 @@
             <div id="dailyResult" class="daily-result hidden"></div>
             <div class="daily-meta">
               <span>TODAY ATTEMPTS<b id="dailyAttempts">0</b></span
-              ><span>PERSONAL BEST<b id="dailyBest">—</b></span>
+              ><span>PERSONAL BEST<b id="dailyBest">—</b></span
+              ><span>DAILY STREAK<b id="dailyStreak">0 days</b></span>
             </div>
+            <button id="shareDaily" class="action secondary hidden">SHARE MY RESULT</button>
             <div class="ticket-row">
               <span>Daily Replay Tickets</span><b id="replayCredits">0</b>
             </div>
@@ -507,7 +512,7 @@
         lives = 5,
         combo = 0,
         dailyState = null,
-        dailyMeta = { attempts: 0, best: null },
+        dailyMeta = { attempts: 0, best: null, streak: { count: 0, lastDay: null } },
         dailyVisible = {},
         dailyBusy = false,
         dailyLoading = false,
@@ -801,6 +806,8 @@
         $("dailyBest").textContent = dailyMeta.best
           ? `${dailyMeta.best.moves} moves · ${dailyMeta.best.score} pts`
           : "—";
+        const streakCount = Number(dailyMeta.streak?.count) || 0;
+        $("dailyStreak").textContent = `${streakCount} ${streakCount === 1 ? "day" : "days"}`;
         if (!dailyState) {
           $("startDaily").classList.remove("hidden");
           $("startDaily").disabled = dailyBusy || dailyLoading;
@@ -812,6 +819,7 @@
           $("dailyGrid").innerHTML = "";
           $("dailyProgress").style.width = "0%";
           $("dailyResult").classList.add("hidden");
+          $("shareDaily").classList.add("hidden");
           return;
         }
         $("startDaily").classList.add("hidden");
@@ -835,6 +843,7 @@
         }
         const done = dailyState.status !== "active";
         $("dailyResult").classList.toggle("hidden", !done);
+        $("shareDaily").classList.toggle("hidden", dailyState.status !== "completed");
         $("useReplay").classList.toggle("hidden", !done || replayCredits < 1);
         if (done)
           $("dailyResult").textContent =
@@ -842,6 +851,21 @@
               ? `Completed · ${dailyState.score} points · ${dailyState.moves} moves`
               : `Move limit reached · ${dailyState.matches}/6 pairs`;
       }
+      $("shareDaily").onclick = async () => {
+        if (dailyState?.status !== "completed") return;
+        const url = `${location.origin}/?source=share&mode=daily`;
+        const text = `I completed Arena Daily in ${dailyState.moves} moves with ${dailyState.score} points. Can you beat me?`;
+        try {
+          if (navigator.share) await navigator.share({ title: "Arena Daily", text, url });
+          else {
+            await navigator.clipboard.writeText(`${text} ${url}`);
+            setStatus("Challenge link copied · sharing is always optional");
+          }
+          api("/api/game-state", { action: "daily-share" }).catch(() => {});
+        } catch (error) {
+          if (error?.name !== "AbortError") setStatus("Sharing is not available on this device");
+        }
+      };
       async function dailyFlip(index) {
         if (dailyBusy || dailyLoading) return;
         dailyBusy = true;
