@@ -524,12 +524,27 @@
         if (auth && accessToken)
           headers.Authorization = `Bearer ${accessToken}`;
         if (auth && arenaSession) headers["X-Arena-Session"] = arenaSession;
-        const r = await fetch(path, {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+        let r;
+        try {
+          r = await fetch(path, {
             method: "POST",
             headers,
             body: JSON.stringify(body || {}),
-          }),
-          d = await r.json().catch(() => ({}));
+            signal: controller.signal,
+          });
+        } catch (error) {
+          if (error?.name === "AbortError") {
+            const timeoutError = new Error("Connection timed out · recovering state");
+            timeoutError.timedOut = true;
+            throw timeoutError;
+          }
+          throw error;
+        } finally {
+          clearTimeout(timeout);
+        }
+        const d = await r.json().catch(() => ({}));
         if (!r.ok) {
           const e = new Error(d.error || `Request failed (${r.status})`);
           e.status = r.status;
@@ -858,6 +873,17 @@
           setStatus("Online · Daily synced");
         } catch (e) {
           setStatus(e.message);
+          if (e.timedOut) {
+            try {
+              const recovered = await api("/api/game-state", { action: "daily-status" });
+              dailyState = recovered.daily;
+              dailyMeta = recovered.meta || dailyMeta;
+              dailyVisible = {};
+              if (dailyState?.firstIndex !== null && dailyState?.firstIndex !== undefined)
+                dailyVisible[dailyState.firstIndex] = dailyState.firstValue;
+              setStatus("Daily restored after a slow connection");
+            } catch {}
+          }
         } finally {
           dailyPendingIndex = null;
           dailyBusy = false;
@@ -1121,6 +1147,16 @@
           setStatus("Online · PvP synced");
         } catch (e) {
           setStatus(e.message);
+          if (e.timedOut) {
+            try {
+              const recovered = await api("/api/game-state", { action: "pvp-status" });
+              pvpState = recovered.pvp;
+              pvpVisible = {};
+              if (pvpState?.own.firstIndex !== null && pvpState?.own.firstIndex !== undefined)
+                pvpVisible[pvpState.own.firstIndex] = pvpState.own.firstValue;
+              setStatus("PvP restored after a slow connection");
+            } catch {}
+          }
         } finally {
           pvpPendingIndex = null;
           pvpBusy = false;
