@@ -114,6 +114,24 @@
         border-radius: 16px;
         margin-bottom: 18px;
       }
+      .daily-spotlight {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 14px;
+        padding: 14px;
+        border: 1px solid #43ded155;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #28245a, #153b4b);
+      }
+      .daily-spotlight small { display: block; color: var(--gold); font-weight: 900; letter-spacing: 0.04em; }
+      .daily-spotlight strong, .daily-spotlight span { display: block; }
+      .daily-spotlight strong { margin-top: 4px; }
+      .daily-spotlight span { margin-top: 3px; color: var(--muted); font-size: 0.76rem; line-height: 1.35; }
+      .daily-spotlight .action { width: auto; min-width: 92px; margin: 0; padding: 11px 12px; font-size: 0.75rem; }
+      .daily-next-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .daily-next-actions .action:last-child { grid-column: 1 / -1; }
       .tab {
         border: 0;
         border-radius: 12px;
@@ -381,6 +399,14 @@
         </div>
         <button id="login" class="action">SIGN IN WITH PI</button>
         <div id="app" class="hidden">
+          <div id="dailySpotlight" class="daily-spotlight">
+            <div>
+              <small>🔥 DAILY CHALLENGE</small>
+              <strong id="dailySpotlightTitle">Today’s challenge is ready</strong>
+              <span id="dailySpotlightText">Complete it and continue your streak.</span>
+            </div>
+            <button id="openDaily" class="action">PLAY NOW</button>
+          </div>
           <nav class="tabs">
             <button id="classicTab" class="tab active">Classic</button
             ><button id="dailyTab" class="tab">Daily</button
@@ -428,7 +454,11 @@
               ><span>PERSONAL BEST<b id="dailyBest">—</b></span
               ><span>DAILY STREAK<b id="dailyStreak">0 days</b></span>
             </div>
-            <button id="shareDaily" class="action secondary hidden">SHARE MY RESULT</button>
+            <div id="dailyNextActions" class="daily-next-actions hidden">
+              <button id="shareDaily" class="action secondary">SHARE RESULT</button>
+              <button id="viewDailyLeaderboard" class="action secondary">VIEW RANKING</button>
+              <button id="dailyToPvp" class="action">PLAY PVP</button>
+            </div>
             <div class="ticket-row">
               <span>Daily Replay Tickets</span><b id="replayCredits">0</b>
             </div>
@@ -517,6 +547,7 @@
         dailyBusy = false,
         dailyLoading = false,
         dailyLoadId = 0,
+        dailyLoaded = false,
         dailyPendingIndex = null,
         paymentBusy = false,
         pvpState = null,
@@ -612,6 +643,7 @@
           $("premium").disabled = !storeReady;
           const restored = await loadProgress();
           initGame(restored);
+          if (storeReady) loadDaily(true);
           setStatus(
             storeReady
               ? restored
@@ -750,13 +782,14 @@
           $(tab).classList.toggle("hidden", name !== tab);
           $(`${tab}Tab`).classList.toggle("active", name === tab);
         }
-        if (name === "daily" && storeReady) loadDaily();
+        if (name === "daily" && storeReady && !dailyLoaded) loadDaily();
         if (name === "pvp" && storeReady) loadPvp();
       }
       $("classicTab").onclick = () => showTab("classic");
       $("dailyTab").onclick = () => showTab("daily");
       $("pvpTab").onclick = () => showTab("pvp");
-      async function loadDaily() {
+      $("openDaily").onclick = () => showTab("daily");
+      async function loadDaily(silent = false) {
         const requestId = ++dailyLoadId;
         dailyLoading = true;
         renderDaily();
@@ -765,13 +798,14 @@
           if (requestId !== dailyLoadId) return;
           dailyState = d.daily;
           dailyMeta = d.meta || dailyMeta;
+          dailyLoaded = true;
           dailyVisible = {};
           if (dailyState?.firstIndex !== null && dailyState?.firstIndex !== undefined)
             dailyVisible[dailyState.firstIndex] = dailyState.firstValue;
           renderDaily();
           await loadLeaderboard();
         } catch (e) {
-          if (requestId === dailyLoadId) setStatus(e.message);
+          if (requestId === dailyLoadId && !silent) setStatus(e.message);
         } finally {
           if (requestId === dailyLoadId) {
             dailyLoading = false;
@@ -808,6 +842,7 @@
           : "—";
         const streakCount = Number(dailyMeta.streak?.count) || 0;
         $("dailyStreak").textContent = `${streakCount} ${streakCount === 1 ? "day" : "days"}`;
+        updateDailySpotlight(streakCount);
         if (!dailyState) {
           $("startDaily").classList.remove("hidden");
           $("startDaily").disabled = dailyBusy || dailyLoading;
@@ -819,7 +854,7 @@
           $("dailyGrid").innerHTML = "";
           $("dailyProgress").style.width = "0%";
           $("dailyResult").classList.add("hidden");
-          $("shareDaily").classList.add("hidden");
+          $("dailyNextActions").classList.add("hidden");
           return;
         }
         $("startDaily").classList.add("hidden");
@@ -843,13 +878,33 @@
         }
         const done = dailyState.status !== "active";
         $("dailyResult").classList.toggle("hidden", !done);
-        $("shareDaily").classList.toggle("hidden", dailyState.status !== "completed");
+        $("dailyNextActions").classList.toggle("hidden", dailyState.status !== "completed");
         $("useReplay").classList.toggle("hidden", !done || replayCredits < 1);
         if (done)
           $("dailyResult").textContent =
             dailyState.status === "completed"
               ? `Completed · ${dailyState.score} points · ${dailyState.moves} moves`
               : `Move limit reached · ${dailyState.matches}/6 pairs`;
+      }
+      function updateDailySpotlight(streakCount = 0) {
+        const title = $("dailySpotlightTitle"), text = $("dailySpotlightText"), button = $("openDaily");
+        if (dailyLoading && !dailyLoaded) {
+          title.textContent = "Preparing today’s challenge…";
+          text.textContent = "You can keep playing Classic while it loads.";
+          button.textContent = "OPEN";
+        } else if (dailyState?.status === "completed") {
+          title.textContent = "Daily completed";
+          text.textContent = `${dailyState.score} points · ${streakCount} day streak`;
+          button.textContent = "VIEW";
+        } else if (dailyState?.status === "active") {
+          title.textContent = "Continue today’s challenge";
+          text.textContent = `${dailyState.matches}/6 pairs found · progress saved`;
+          button.textContent = "CONTINUE";
+        } else {
+          title.textContent = "Today’s challenge is ready";
+          text.textContent = streakCount ? `Complete it to continue your ${streakCount} day streak.` : "Complete it and start your streak.";
+          button.textContent = "PLAY NOW";
+        }
       }
       $("shareDaily").onclick = async () => {
         if (dailyState?.status !== "completed") return;
@@ -866,6 +921,10 @@
           if (error?.name !== "AbortError") setStatus("Sharing is not available on this device");
         }
       };
+      $("viewDailyLeaderboard").onclick = () => {
+        document.querySelector(".leaderboard").scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+      $("dailyToPvp").onclick = () => showTab("pvp");
       async function dailyFlip(index) {
         if (dailyBusy || dailyLoading) return;
         dailyBusy = true;
