@@ -2,5 +2,9 @@
   "private": true,
   "engines": {
     "node": ">=22"
+  },
+  "scripts": {
+    "test": "node check-daily-recovery.cjs && node tests/check-admin.cjs && node tests/check-payments.cjs && node tests/check-redis.cjs && node tests/check-testnet.cjs",
+    "check:build": "node check-build.cjs"
   }
 }

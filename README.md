@@ -19,7 +19,7 @@ Arena Test is the Testnet development build for Arena. It uses `Pi.init({ versio
 
 ## Security boundaries
 
-Classic mode remains a casual progression mode: its score is calculated in the browser and must not be used for prizes or a competitive leaderboard. Daily Arena is the server-validated foundation for future leaderboards and asynchronous PvP. Daily results award gameplay points only and never Pi.
+Classic remains a casual progression mode: its score is calculated in the browser and bounded by the server. Its weekly ranking is for gameplay only and must not be used for prizes. Daily Arena is the server-validated foundation for future leaderboards and asynchronous PvP. Daily results award gameplay points only and never Pi.
 
 Daily ranking prioritizes a completed challenge with fewer moves; when moves are equal, the higher score ranks first. Only server-completed Daily Arena results can enter the leaderboard. Authorized Pi usernames are displayed in the daily Top 10.
 
@@ -67,3 +67,9 @@ All Testnet records use the `arena:test:*` namespace. Mainnet uses the separate 
 16. Start another match, choose Arena Bot, and confirm the opponent is visibly labelled as a bot.
 
 Test-Pi has no real-world value. Arena Test is not an investment, gambling or earning product.
+
+## Recovery and interface parity
+
+Daily status reconciliation, first-flip restoration, atomic best-result and streak updates, atomic ticket delivery and fenced start/reset operations are aligned with Mainnet recovery fixes. Late responses, double taps and UTC day changes are guarded. Classic weekly rankings and a private mobile metrics dashboard are available; rankings show names above statistics. All Testnet products, amounts, sandbox mode, session signing and Redis `arena:test:*` keys are retained. No Next.js runtime is introduced. Gameplay A2U remains disabled.
+
+Run `npm test` and `npm run check:build`. Optional real-Lua tests use `REDIS_TEST_SERVER` pointing to an isolated local redis-server. Confirm login, recovery, Daily and PvP in Pi Browser manually. Admin metrics require a server-verified Pi username (existing owner default); no deployment environment is changed by this update.

@@ -8,9 +8,9 @@
     />
     <meta
       name="description"
-      content="Arena Test is a skill-based memory game for Pi Testnet."
+      content="Arena is a skill-based memory game for Pi Testnet."
     />
-    <title>Arena Test · Pi Testnet</title>
+    <title>Arena · Pi Testnet</title>
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
     <script>
       Pi.init({ version: "2.0", sandbox: true });
@@ -125,13 +125,36 @@
         border-radius: 16px;
         background: linear-gradient(135deg, #28245a, #153b4b);
       }
-      .daily-spotlight small { display: block; color: var(--gold); font-weight: 900; letter-spacing: 0.04em; }
-      .daily-spotlight strong, .daily-spotlight span { display: block; }
+      .daily-spotlight small {
+        display: block;
+        color: var(--gold);
+        font-weight: 900;
+        letter-spacing: 0.04em;
+      }
+      .daily-spotlight strong,
+      .daily-spotlight span {
+        display: block;
+      }
       .daily-spotlight strong { margin-top: 4px; }
-      .daily-spotlight span { margin-top: 3px; color: var(--muted); font-size: 0.76rem; line-height: 1.35; }
-      .daily-spotlight .action { width: auto; min-width: 92px; margin: 0; padding: 11px 12px; font-size: 0.75rem; }
-      .daily-next-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-      .daily-next-actions .action:last-child { grid-column: 1 / -1; }
+      .daily-spotlight span {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 0.76rem;
+        line-height: 1.35;
+      }
+      .daily-spotlight .action {
+        width: auto;
+        min-width: 92px;
+        margin: 0;
+        padding: 11px 12px;
+        font-size: 0.75rem;
+      }
+      .daily-next-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .daily-next-actions .action { width: 100%; min-width: 0; }
       .tab {
         border: 0;
         border-radius: 12px;
@@ -319,10 +342,14 @@
         padding: 5px 0;
       }
       .leaderboard li b {
+        display: block;
+        overflow-wrap: anywhere;
         color: #fff;
       }
       .leaderboard li small {
-        float: right;
+        display: block;
+        margin-top: 4px;
+        overflow-wrap: anywhere;
         color: var(--gold);
       }
       .pvp-opponent {
@@ -388,14 +415,14 @@
       <header class="hero">
         <div class="logo">⚔</div>
         <div>
-          <h1>Arena Test</h1>
+          <h1>Arena</h1>
           <p>Memory, skill and daily challenges</p>
         </div>
         <span class="badge">PI TESTNET</span>
       </header>
       <section class="panel">
         <div id="identity" class="identity">
-          <span>Sign in with Pi to play</span><strong id="sync">TEST-π</strong>
+          <span>Sign in with Pi to play</span><strong id="sync">TESTNET</strong>
         </div>
         <button id="login" class="action">SIGN IN WITH PI</button>
         <div id="app" class="hidden">
@@ -426,10 +453,16 @@
             <button id="restart" class="action secondary hidden">
               RESTART LEVEL</button
             ><button id="premium" class="action premium">
-              UNLOCK PREMIUM · 1 TEST-π
+              UNLOCK PREMIUM · 1 π
             </button>
             <div id="premiumActive" class="daily-result hidden">
               ★ Premium active
+            </div>
+            <div class="leaderboard">
+              <h3>CLASSIC WEEKLY TOP 10 <span id="classicOwnPosition"></span></h3>
+              <ol id="classicLeaders">
+                <li>Complete a level to enter this week’s ranking</li>
+              </ol>
             </div>
           </section>
           <section id="daily" class="hidden">
@@ -447,6 +480,7 @@
               class="grid"
               style="grid-template-columns: repeat(4, 1fr)"
             ></div>
+            <button id="syncDaily" class="action secondary hidden">RESTORE SAVED DAILY</button>
             <button id="startDaily" class="action">START DAILY ARENA</button>
             <div id="dailyResult" class="daily-result hidden"></div>
             <div class="daily-meta">
@@ -455,8 +489,7 @@
               ><span>DAILY STREAK<b id="dailyStreak">0 days</b></span>
             </div>
             <div id="dailyNextActions" class="daily-next-actions hidden">
-              <button id="shareDaily" class="action secondary">SHARE / COPY</button>
-              <button id="viewDailyLeaderboard" class="action secondary">VIEW RANKING</button>
+              <button id="dailyToClassic" class="action">PLAY CLASSIC · FREE</button>
               <button id="dailyToPvp" class="action">PLAY PVP</button>
             </div>
             <div class="ticket-row">
@@ -465,7 +498,7 @@
             <button id="useReplay" class="action hidden">
               USE 1 TICKET · NEW CHALLENGE</button
             ><button id="buyReplay" class="action premium">
-              BUY REPLAY TICKET · 0.1 TEST-π
+              BUY REPLAY TICKET · 0.1 Test-Pi
             </button>
             <div class="leaderboard">
               <h3>TOP 10 TODAY <span id="ownPosition"></span></h3>
@@ -500,7 +533,8 @@
           </section>
           <div id="status" class="status">Ready.</div>
           <div class="note">
-            Test-Pi has no real-world value. Daily results do not award Pi.
+            Gameplay points have no cash value. Daily and PvP results do not
+            award Pi.
           </div>
         </div>
       </section>
@@ -545,9 +579,11 @@
         dailyMeta = { attempts: 0, best: null, streak: { count: 0, lastDay: null } },
         dailyVisible = {},
         dailyBusy = false,
+        dailyNeedsSync = false,
         dailyLoading = false,
         dailyLoadId = 0,
         dailyLoaded = false,
+        dailyViewRecorded = false,
         dailyPendingIndex = null,
         paymentBusy = false,
         pvpState = null,
@@ -562,14 +598,20 @@
         if (auth && arenaSession) headers["X-Arena-Session"] = arenaSession;
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 12000);
-        let r;
         try {
-          r = await fetch(path, {
+          const r = await fetch(path, {
             method: "POST",
             headers,
             body: JSON.stringify(body || {}),
             signal: controller.signal,
           });
+          const d = await r.json().catch(error => { if(error?.name === "AbortError")throw error; return {}; });
+          if (!r.ok) {
+            const e = new Error(d.error || `Request failed (${r.status})`);
+            e.status = r.status;
+            throw e;
+          }
+          return d;
         } catch (error) {
           if (error?.name === "AbortError") {
             const timeoutError = new Error("Connection timed out · recovering state");
@@ -580,13 +622,6 @@
         } finally {
           clearTimeout(timeout);
         }
-        const d = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          const e = new Error(d.error || `Request failed (${r.status})`);
-          e.status = r.status;
-          throw e;
-        }
-        return d;
       }
       function setStatus(t) {
         $("status").textContent = t;
@@ -629,13 +664,24 @@
           const a = await Pi.authenticate(["username", "payments"], recover);
           if (!a?.accessToken) throw Error("Pi did not return an access token");
           accessToken = a.accessToken;
-          const s = await api("/api/auth", {});
+          const incoming = new URLSearchParams(location.search).get("source") || new URLSearchParams(location.search).get("ref");
+          if (incoming) localStorage.setItem("arena-source", incoming.toLowerCase());
+          const source = localStorage.getItem("arena-source") || "direct";
+          const s = await api("/api/auth", { source });
           arenaSession = s.arenaSession || null;
           premium = !!s.premium;
           replayCredits = Number(s.replayCredits) || 0;
           storeReady = !!s.storeReady;
-          $("identity").innerHTML =
-            `<span>Signed in as <strong>${s.username ? "@" + s.username : "Verified Pioneer"}</strong></span><strong>SYNCED</strong>`;
+          const identity = $("identity"),
+            signed = document.createElement("span"),
+            name = document.createElement("strong"),
+            synced = document.createElement("strong");
+          identity.replaceChildren();
+          signed.append("Signed in as ");
+          name.textContent = s.username ? "@" + s.username : "Verified Pioneer";
+          signed.appendChild(name);
+          synced.textContent = "SYNCED";
+          identity.append(signed, synced);
           $("login").classList.add("hidden");
           $("app").classList.remove("hidden");
           $("premium").classList.toggle("hidden", premium);
@@ -645,6 +691,7 @@
           initGame(restored);
           const requestedMode = new URLSearchParams(location.search).get("mode");
           if (storeReady) {
+            loadClassicLeaderboard();
             if (requestedMode === "daily") showTab("daily");
             else loadDaily(true);
           }
@@ -720,7 +767,7 @@
             combo === 3 ? "🔥 TRIPLE COMBO · +50 POINTS" : `COMBO X${combo}!`;
           if (cards.every((c) => c.matched)) {
             level++;
-            saveProgress();
+            submitClassicCompletion();
             setTimeout(() => initGame(false), 700);
           }
         } else {
@@ -733,6 +780,37 @@
         renderClassic();
         saveProgress();
       }
+      async function loadClassicLeaderboard() {
+        if (!storeReady) return;
+        try {
+          const data = await api("/api/game-state", { action: "classic-leaderboard" });
+          renderClassicLeaderboard(data);
+        } catch (error) {
+          console.warn("Classic leaderboard", error.message);
+        }
+      }
+      function renderClassicLeaderboard(data) {
+        $("classicOwnPosition").textContent = data?.position ? `Your rank #${data.position}` : "";
+        $("classicLeaders").innerHTML = data?.leaders?.length
+          ? data.leaders.map((entry) =>
+              `<li><b>@${escapeHtml(entry.username)}</b><small>Level ${entry.level} · ${entry.score} pts</small></li>`
+            ).join("")
+          : "<li>Complete a level to enter this week’s ranking</li>";
+      }
+      async function submitClassicCompletion() {
+        if (!storeReady) return;
+        try {
+          const data = await api("/api/game-state", {
+            action: "classic-complete",
+            level,
+            score,
+            lives,
+          });
+          renderClassicLeaderboard(data);
+        } catch (error) {
+          console.warn("Classic result", error.message);
+        }
+      }
       $("restart").onclick = () => {
         lives = Math.min(5 + level - 1, 10);
         initGame(true);
@@ -742,7 +820,7 @@
       $("premium").onclick = () => {
         if (!accessToken || premium || !storeReady) return;
         $("premium").disabled = true;
-        setStatus("Opening Testnet payment…");
+        setStatus("Opening Pi payment…");
         Pi.createPayment(
           {
             amount: 1,
@@ -786,14 +864,25 @@
           $(tab).classList.toggle("hidden", name !== tab);
           $(`${tab}Tab`).classList.toggle("active", name === tab);
         }
-        if (name === "daily" && storeReady && !dailyLoaded) loadDaily();
+        if (name === "daily" && storeReady) {
+          if (!dailyViewRecorded) {
+            dailyViewRecorded = true;
+            recordClientEvent("daily_viewed");
+          }
+          if (!dailyLoaded || (dailyState?.day && dailyState.day !== new Date().toISOString().slice(0,10))) loadDaily();
+        }
         if (name === "pvp" && storeReady) loadPvp();
       }
       $("classicTab").onclick = () => showTab("classic");
       $("dailyTab").onclick = () => showTab("daily");
       $("pvpTab").onclick = () => showTab("pvp");
-      $("openDaily").onclick = () => showTab("daily");
+      $("openDaily").onclick = () => showTab(dailyState && dailyState.status !== "active" ? "classic" : "daily");
+      async function recordClientEvent(event) {
+        if (!storeReady) return;
+        try { await api("/api/game-state", { action: "client-event", event }); } catch {}
+      }
       async function loadDaily(silent = false) {
+        if (dailyBusy && !dailyNeedsSync) return;
         const requestId = ++dailyLoadId;
         dailyLoading = true;
         renderDaily();
@@ -802,7 +891,9 @@
           if (requestId !== dailyLoadId) return;
           dailyState = d.daily;
           dailyMeta = d.meta || dailyMeta;
+          if (Number.isFinite(d.replayCredits)) replayCredits = d.replayCredits;
           dailyLoaded = true;
+          dailyNeedsSync = false;
           dailyVisible = {};
           if (dailyState?.firstIndex !== null && dailyState?.firstIndex !== undefined)
             dailyVisible[dailyState.firstIndex] = dailyState.firstValue;
@@ -818,7 +909,7 @@
         }
       }
       $("startDaily").onclick = async () => {
-        if (dailyBusy || dailyLoading) return;
+        if (dailyBusy || dailyLoading || dailyNeedsSync) return;
         ++dailyLoadId;
         dailyLoading = false;
         dailyBusy = true;
@@ -831,7 +922,7 @@
           dailyVisible = {};
           renderDaily();
         } catch (e) {
-          setStatus(e.message);
+          await restoreDailyAfterError(e);
         } finally {
           dailyBusy = false;
           $("startDaily").disabled = false;
@@ -839,7 +930,20 @@
           renderDaily();
         }
       };
+      async function restoreDailyAfterError(error) {
+        dailyNeedsSync = true;
+        if (error.timedOut) recordClientEvent("daily_timeout");
+        await loadDaily();
+        if (!dailyNeedsSync) {
+          recordClientEvent("daily_recovered");
+          setStatus("Daily restored from saved progress. Continue when ready.");
+        } else setStatus("Could not verify saved progress. Tap RESTORE SAVED DAILY before continuing.");
+      }
+      $("syncDaily").onclick = () => { if (!dailyBusy && !dailyLoading) loadDaily(); };
       function renderDaily() {
+        $("syncDaily").classList.toggle("hidden", !dailyNeedsSync);
+        $("syncDaily").disabled = dailyBusy || dailyLoading;
+
         $("replayCredits").textContent = replayCredits;
         $("dailyAttempts").textContent = dailyMeta.attempts || 0;
         $("dailyBest").textContent = dailyMeta.best
@@ -850,7 +954,7 @@
         updateDailySpotlight(streakCount);
         if (!dailyState) {
           $("startDaily").classList.remove("hidden");
-          $("startDaily").disabled = dailyBusy || dailyLoading;
+          $("startDaily").disabled = dailyBusy || dailyLoading || dailyNeedsSync;
           $("startDaily").textContent = dailyLoading
             ? "LOADING DAILY…"
             : dailyBusy
@@ -877,13 +981,13 @@
             (value || pending ? " flipped" : "") +
             (matched ? " matched" : "");
           b.textContent = pending ? "…" : value || "";
-          b.disabled = dailyBusy || dailyLoading || matched || dailyState.status !== "active";
+          b.disabled = dailyBusy || dailyLoading || dailyNeedsSync || matched || dailyState.status !== "active";
           b.onclick = () => dailyFlip(i);
           $("dailyGrid").appendChild(b);
         }
         const done = dailyState.status !== "active";
         $("dailyResult").classList.toggle("hidden", !done);
-        $("dailyNextActions").classList.toggle("hidden", dailyState.status !== "completed");
+        $("dailyNextActions").classList.toggle("hidden", !done);
         $("useReplay").classList.toggle("hidden", !done || replayCredits < 1);
         if (done)
           $("dailyResult").textContent =
@@ -900,44 +1004,36 @@
         } else if (dailyState?.status === "completed") {
           title.textContent = "Daily completed";
           text.textContent = `${dailyState.score} points · ${streakCount} day streak`;
-          button.textContent = "VIEW";
+          button.textContent = "PLAY CLASSIC";
         } else if (dailyState?.status === "active") {
           title.textContent = "Continue today’s challenge";
           text.textContent = `${dailyState.matches}/6 pairs found · progress saved`;
           button.textContent = "CONTINUE";
+        } else if (dailyState?.status === "failed") {
+          title.textContent = "Daily move limit reached";
+          text.textContent = "Keep practising in Classic for free. A new Daily arrives at 00:00 UTC.";
+          button.textContent = "PLAY CLASSIC";
         } else {
           title.textContent = "Today’s challenge is ready";
           text.textContent = streakCount ? `Complete it to continue your ${streakCount} day streak.` : "Complete it and start your streak.";
           button.textContent = "PLAY NOW";
         }
       }
-      $("shareDaily").onclick = async () => {
-        if (dailyState?.status !== "completed") return;
-        const url = `${location.origin}/?source=share&mode=daily`;
-        const text = `I completed Arena Daily in ${dailyState.moves} moves with ${dailyState.score} points. Can you beat me?`;
-        try {
-          if (navigator.share) await navigator.share({ title: "Arena Daily", text, url });
-          else {
-            await navigator.clipboard.writeText(`${text} ${url}`);
-            setStatus("Result and Arena link copied · paste them into Fireside or any channel");
-          }
-          api("/api/game-state", { action: "daily-share" }).catch(() => {});
-        } catch (error) {
-          if (error?.name !== "AbortError") setStatus("Sharing is not available on this device");
-        }
-      };
-      $("viewDailyLeaderboard").onclick = () => {
-        document.querySelector(".leaderboard").scrollIntoView({ behavior: "smooth", block: "start" });
-      };
+      $("dailyToClassic").onclick = () => showTab("classic");
       $("dailyToPvp").onclick = () => showTab("pvp");
       async function dailyFlip(index) {
-        if (dailyBusy || dailyLoading) return;
+        if (dailyBusy || dailyLoading || dailyNeedsSync) return;
+        if (dailyState?.day !== new Date().toISOString().slice(0,10)) { await loadDaily(); return; }
         dailyBusy = true;
         dailyPendingIndex = index;
         renderDaily();
         try {
           const d = await api("/api/game-state", {
             action: "daily-flip",
+            day: dailyState.day,
+            expectedMoves: dailyState.moves,
+            expectedFirstIndex: dailyState.firstIndex,
+            expectedAttemptId: dailyState.attemptId,
             index,
           });
           dailyPendingIndex = null;
@@ -960,18 +1056,7 @@
           if (dailyState.status === "completed") await loadLeaderboard();
           setStatus("Online · Daily synced");
         } catch (e) {
-          setStatus(e.message);
-          if (e.timedOut) {
-            try {
-              const recovered = await api("/api/game-state", { action: "daily-status" });
-              dailyState = recovered.daily;
-              dailyMeta = recovered.meta || dailyMeta;
-              dailyVisible = {};
-              if (dailyState?.firstIndex !== null && dailyState?.firstIndex !== undefined)
-                dailyVisible[dailyState.firstIndex] = dailyState.firstValue;
-              setStatus("Daily restored after a slow connection");
-            } catch {}
-          }
+          await restoreDailyAfterError(e);
         } finally {
           dailyPendingIndex = null;
           dailyBusy = false;
@@ -1056,17 +1141,19 @@
         );
       };
       $("useReplay").onclick = async () => {
-        if (dailyBusy || replayCredits < 1) return;
+        if (dailyBusy || dailyLoading || dailyNeedsSync || replayCredits < 1) return;
+        if (dailyState?.day !== new Date().toISOString().slice(0,10)) { await loadDaily(); return; }
+        ++dailyLoadId;
         dailyBusy = true;
         try {
-          const d = await api("/api/game-state", { action: "daily-reset" });
+          const d = await api("/api/game-state", { action: "daily-reset", day: dailyState.day, expectedAttemptId: dailyState.attemptId });
           dailyState = d.daily;
           dailyMeta = d.meta || dailyMeta;
           replayCredits = Number(d.replayCredits) || 0;
           dailyVisible = {};
           setStatus("New Daily Arena generated");
         } catch (e) {
-          setStatus(e.message);
+          await restoreDailyAfterError(e);
         } finally {
           dailyBusy = false;
           renderDaily();

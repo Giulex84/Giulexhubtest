@@ -1,3 +1,37 @@
-const {bearerFromRequest,verifyAccessToken,issueArenaSession}=require("../lib/pi");
-const {hasPremium,getReplayCredits,saveProfile,isStoreConfigured}=require("../lib/store");
-module.exports=async function handler(req,res){res.setHeader("Cache-Control","no-store");if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});const token=bearerFromRequest(req);if(!token)return res.status(401).json({error:"Missing Pi access token"});try{const user=await verifyAccessToken(token),ready=isStoreConfigured();if(ready)await saveProfile(user.uid,user.username||null);return res.status(200).json({uid:user.uid,username:user.username||null,premium:ready?await hasPremium(user.uid):false,replayCredits:ready?await getReplayCredits(user.uid):0,storeReady:ready,arenaSession:issueArenaSession(user.uid,user.username||null)});}catch{return res.status(401).json({error:"Pi authentication could not be verified"});}};
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = handler;
+const pi_1 = require("../lib/pi");
+const store_1 = require("../lib/store");
+const metrics_1 = require("../lib/metrics");
+async function handler(req, res) {
+    res.setHeader("Cache-Control", "no-store");
+    if (req.method !== "POST")
+        return res.status(405).json({ error: "Method not allowed" });
+    const token = (0, pi_1.bearerFromRequest)(req);
+    if (!token)
+        return res.status(401).json({ error: "Missing Pi access token" });
+    try {
+        const user = await (0, pi_1.verifyAccessToken)(token);
+        const storeReady = (0, store_1.isStoreConfigured)();
+        if (storeReady) {
+            const requestedSource = typeof req.body?.source === "string" ? req.body.source.toLowerCase() : "direct";
+            const source = ["fireside", "staking", "share"].includes(requestedSource) ? requestedSource : "direct";
+            await (0, store_1.saveProfile)(user.uid, user.username || null);
+            await Promise.all([(0, metrics_1.safeRecordMetric)(user.uid, "login"), (0, metrics_1.safeRecordMetric)(user.uid, `source_${source}`, new Date().toISOString().slice(0, 10))]);
+        }
+        return res.status(200).json({
+            uid: user.uid,
+            username: user.username || null,
+            premium: storeReady ? await (0, store_1.hasPremium)(user.uid) : false,
+            replayCredits: storeReady ? await (0, store_1.getReplayCredits)(user.uid) : 0,
+            storeReady,
+            arenaSession: (0, pi_1.issueArenaSession)(user.uid, user.username || null),
+        });
+    }
+    catch {
+        return res.status(401).json({ error: "Pi authentication could not be verified" });
+    }
+}
+
+module.exports = exports.default;

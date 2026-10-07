@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>Arena · Metriche private</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <script>
+      Pi.init({ version: "2.0", sandbox: true });
+    </script>
+    <style>
+      :root {
+        --bg: #070814;
+        --panel: #12162b;
+        --panel2: #19203c;
+        --line: #303b70;
+        --violet: #7c6cff;
+        --cyan: #43ded1;
+        --gold: #ffc857;
+        --text: #f6f7ff;
+        --muted: #9ca7cf;
+        --red: #ff647c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(
+          circle at 50% -10%,
+          #252f76 0,
+          #10142f 35%,
+          var(--bg) 75%
+        );
+        color: var(--text);
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      .shell {
+        width: min(94%, 760px);
+        margin: auto;
+        padding: 24px 0 44px;
+      }
+      .hero {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+      .logo {
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, var(--violet), var(--cyan));
+        font-size: 28px;
+      }
+      .hero h1 {
+        font-size: 1.45rem;
+        margin: 0;
+      }
+      .hero p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+      .badge {
+        margin-left: auto;
+        border: 1px solid #43ded166;
+        color: var(--cyan);
+        padding: 7px 10px;
+        border-radius: 999px;
+        font-size: 0.65rem;
+        font-weight: 800;
+      }
+      .panel {
+        background: linear-gradient(155deg, #171c37ee, #0e1227ee);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 20px;
+        box-shadow: 0 18px 50px #0007;
+      }
+      .action {
+        width: 100%;
+        border: 0;
+        border-radius: 15px;
+        padding: 14px;
+        font-weight: 900;
+        font-size: 0.92rem;
+        color: #07101b;
+        background: linear-gradient(90deg, var(--violet), var(--cyan));
+      }
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .toolbar select,
+      .toolbar button {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--panel2);
+        color: var(--text);
+        padding: 10px 12px;
+      }
+      .toolbar button {
+        margin-left: auto;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      .metric {
+        background: var(--panel2);
+        border: 1px solid #ffffff12;
+        border-radius: 15px;
+        padding: 13px;
+        color: var(--muted);
+        font-size: 0.7rem;
+      }
+      .metric b {
+        display: block;
+        color: var(--text);
+        font-size: 1.35rem;
+        margin-top: 5px;
+      }
+      .table-wrap {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 650px;
+        font-size: 0.76rem;
+      }
+      th,
+      td {
+        padding: 10px 11px;
+        text-align: right;
+        border-bottom: 1px solid #ffffff0e;
+        white-space: nowrap;
+      }
+      th {
+        color: var(--muted);
+        background: #0a0e20;
+        position: sticky;
+        top: 0;
+      }
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+      .status {
+        margin-top: 14px;
+        padding: 11px;
+        border-radius: 13px;
+        background: #080b19;
+        color: var(--muted);
+        font-size: 0.76rem;
+        line-height: 1.4;
+      }
+      .error {
+        color: var(--red);
+      }
+      .hidden {
+        display: none !important;
+      }
+      .note {
+        font-size: 0.7rem;
+        color: var(--muted);
+        text-align: center;
+        margin-top: 13px;
+      }
+      a {
+        color: var(--cyan);
+      }
+      @media (max-width: 560px) {
+        .cards {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .panel {
+          padding: 15px;
+        }
+        .table-wrap {
+          overflow: visible;
+          border: 0;
+        }
+        table,
+        tbody,
+        tr,
+        td {
+          display: block;
+          width: 100%;
+        }
+        table {
+          min-width: 0;
+        }
+        thead {
+          display: none;
+        }
+        tbody {
+          display: grid;
+          gap: 12px;
+        }
+        tbody tr {
+          padding: 12px 14px;
+          border: 1px solid var(--line);
+          border-radius: 15px;
+          background: #0a0e20;
+        }
+        tbody td {
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 8px 0;
+          text-align: right;
+          white-space: normal;
+        }
+        tbody td::before {
+          content: attr(data-label);
+          color: var(--muted);
+          text-align: left;
+          font-weight: 700;
+        }
+        tbody td:first-child {
+          padding-bottom: 11px;
+          margin-bottom: 4px;
+          border-bottom: 1px solid #ffffff20;
+          color: var(--cyan);
+          font-weight: 900;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div class="logo">📊</div>
+        <div>
+          <h1>Metriche Arena</h1>
+          <p>Telemetria aggregata privata</p>
+        </div>
+        <span class="badge">ADMIN</span>
+      </header>
+      <section class="panel">
+        <div id="gate">
+          <button id="login" class="action">VERIFICA CON PI</button>
+          <div id="gateStatus" class="status">
+            Accesso riservato al proprietario di Arena.
+          </div>
+        </div>
+        <div id="dashboard" class="hidden">
+          <div class="toolbar">
+            <select id="days" aria-label="Periodo del rapporto">
+              <option value="7">Ultimi 7 giorni</option>
+              <option value="30" selected>Ultimi 30 giorni</option>
+              <option value="90">Ultimi 90 giorni</option></select
+            ><button id="refresh" type="button">Aggiorna</button>
+          </div>
+          <div class="cards">
+            <div class="metric">UTENTI GIORNALIERI (SOMMA)<b id="unique">0</b></div>
+            <div class="metric">ACCESSI<b id="logins">0</b></div>
+            <div class="metric">NUOVI UTENTI<b id="newUsers">0</b></div>
+            <div class="metric">UTENTI DI RITORNO<b id="returningUsers">0</b></div>
+            <div class="metric">DAILY AVVIATE<b id="dailyStarters">0</b></div>
+            <div class="metric">APERTURE DAILY<b id="dailyViews">0</b></div>
+            <div class="metric">PRIMO TOCCO DAILY<b id="dailyFirstFlips">0</b></div>
+            <div class="metric">DAILY COMPLETATE<b id="dailyCompleters">0</b></div>
+            <div class="metric">COMPLETAMENTO DAILY<b id="dailyRate">0%</b></div>
+            <div class="metric">DAILY NON COMPLETATE<b id="dailyDropoff">0</b><small>Somma degli utenti avviati meno completati per giorno UTC: include partite ancora attive e limite mosse raggiunto, non solo abbandoni.</small></div>
+            <div class="metric">LIMITE MOSSE DAILY<b id="dailyFailures">0</b><small>Eventi di partita terminata al limite mosse; include eventuali replay.</small></div>
+            <div class="metric">TEMPO MEDIO DAILY<b id="dailyTime">—</b><small>Tempo dall’avvio al completamento, incluse le pause; media ponderata sui completamenti tracciati.</small></div>
+            <div class="metric">PVP AVVIATI<b id="pvpStarters">0</b></div>
+            <div class="metric">PVP COMPLETATI<b id="pvpCompleters">0</b></div>
+            <div class="metric">COMPLETAMENTO PVP<b id="pvpRate">0%</b></div>
+            <div class="metric">RITORNO D1<b id="d1">—</b></div>
+            <div class="metric">RITORNO D3<b id="d3">—</b></div>
+            <div class="metric">RITORNO D7<b id="d7">—</b></div>
+            <div class="metric">FIRESIDE<b id="fireside">0</b></div>
+            <div class="metric">ACCESSI DA LINK STAKING<b id="staking">0</b></div>
+            <div class="metric">LINK CONDIVISI<b id="share">0</b></div>
+            <div class="metric">CONDIVISIONI DAILY<b id="dailyShares">0</b></div>
+            <div class="metric">TIMEOUT DAILY<b id="dailyTimeouts">0</b></div>
+            <div class="metric">RECUPERI DAILY<b id="dailyRecoveries">0</b></div>
+            <div class="metric">DIRETTO / ALTRO<b id="direct">0</b></div>
+            <div class="metric">VENDITE PREMIUM<b id="premium">0</b></div>
+            <div class="metric">VENDITE REPLAY<b id="replays">0</b></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Giorno UTC</th>
+                  <th>Utenti</th>
+                  <th>Nuovi</th>
+                  <th>Di ritorno</th>
+                  <th>Accessi</th>
+                  <th>Daily avviate</th>
+                  <th>Daily completate</th>
+                  <th>Daily %</th>
+                  <th>Tempo medio</th>
+                  <th>PvP avviati</th>
+                  <th>PvP completati</th>
+                  <th>Premium</th>
+                  <th>Replay</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <div id="reportStatus" class="status">Caricamento…</div>
+        </div>
+        <div class="note">
+          Solo conteggi aggregati. Gli accessi da link staking misurano la provenienza registrata, non i Pi in staking nel listing. Le Daily non completate non identificano la causa dell’interruzione. I token di accesso Pi vengono usati per la
+          verifica e non sono visualizzati.
+        </div>
+      </section>
+    </main>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      let accessToken = null, reportSequence = 0;
+      const n = (events, key) => Number(events && events[key]) || 0;
+      async function loadReport() {
+        if (!accessToken) return;
+        const sequence=++reportSequence;
+        $("reportStatus").textContent = "Caricamento…";
+        try {
+          const response = await fetch(
+              `/api/metrics?days=${encodeURIComponent($("days").value)}`,
+              { headers: { Authorization: `Bearer ${accessToken}` } },
+            ),
+            data = await response.json().catch(() => ({}));
+          if(sequence!==reportSequence)return;
+          if (!response.ok)
+            throw new Error(
+              response.status === 403
+                ? "Accesso negato: questo account Pi non è l’amministratore di Arena."
+                : data.error || `Richiesta non riuscita (${response.status})`,
+            );
+          const totals = {
+            unique: 0,
+            logins: 0,
+            newUsers: 0,
+            returningUsers: 0,
+            dailyStarters: 0,
+            dailyViews: 0,
+            dailyFirstFlips: 0,
+            dailyCompleters: 0,
+            dailyFailures: 0,
+            dailyDropoff: 0,
+            pvpStarters: 0,
+            pvpCompleters: 0,
+            fireside: 0,
+            staking: 0,
+            share: 0,
+            dailyShares: 0,
+            dailyTimeouts: 0,
+            dailyRecoveries: 0,
+            direct: 0,
+            premium: 0,
+            replays: 0,
+          };
+          const retention = { d1: [0, 0], d3: [0, 0], d7: [0, 0] };
+          let durationSum = 0, durationCount = 0;
+          $("rows").replaceChildren(
+            ...data.rows.map((row) => {
+              const e = row.events || {};
+              totals.unique += Number(row.uniqueUsers) || 0;
+              totals.logins += n(e, "login");
+              totals.newUsers += Number(row.newUsers) || 0;
+              totals.returningUsers += Number(row.returningUsers) || 0;
+              const dailyStarters = row.dailyStarters===undefined ? n(e, "daily_started") : Number(row.dailyStarters)||0;
+              const dailyCompleters = row.dailyCompleters===undefined ? n(e, "daily_completed") : Number(row.dailyCompleters)||0;
+              const pvpStarters = Number(row.pvpStarters) || n(e, "pvp_started");
+              const pvpCompleters = Number(row.pvpCompleters) || n(e, "pvp_completed");
+              totals.dailyStarters += dailyStarters;
+              totals.dailyDropoff += Math.max(0,dailyStarters-dailyCompleters);
+              totals.dailyViews += n(e, "daily_viewed");
+              totals.dailyFirstFlips += n(e, "daily_first_flip");
+              totals.dailyCompleters += dailyCompleters;
+              totals.dailyFailures += n(e, "daily_failed");
+              totals.pvpStarters += pvpStarters;
+              totals.pvpCompleters += pvpCompleters;
+              totals.fireside += n(e, "source_fireside");
+              totals.staking += n(e, "source_staking");
+              totals.share += n(e, "source_share");
+              totals.dailyShares += n(e, "daily_shared");
+              totals.dailyTimeouts += n(e, "daily_timeout");
+              totals.dailyRecoveries += n(e, "daily_recovered");
+              totals.direct += n(e, "source_direct");
+              totals.premium += n(e, "premium_purchased");
+              totals.replays += n(e, "replay_purchased");
+              if (row.dailyDurationCount) { durationSum += Number(row.dailyDurationSum)||0; durationCount += Number(row.dailyDurationCount)||0; }
+              const age = Math.floor((Date.now() - Date.parse(row.day + "T00:00:00Z")) / 86400000);
+              for (const days of [1, 3, 7]) if (age > days) { retention[`d${days}`][0] += Number(row[`d${days}`]) || 0; retention[`d${days}`][1] += Number(row.newUsers) || 0; }
+              const tr = document.createElement("tr");
+              const dailyRate = dailyStarters ? `${Math.round(dailyCompleters / dailyStarters * 100)}%` : "—";
+              const values = [
+                row.day,
+                row.uniqueUsers,
+                row.newUsers,
+                row.returningUsers,
+                n(e, "login"),
+                dailyStarters,
+                dailyCompleters,
+                dailyRate,
+                row.averageDailySeconds ? `${row.averageDailySeconds}s` : "—",
+                pvpStarters,
+                pvpCompleters,
+                n(e, "premium_purchased"),
+                n(e, "replay_purchased"),
+              ];
+              const labels = [
+                "Giorno UTC", "Utenti", "Nuovi", "Di ritorno", "Accessi",
+                "Daily avviate", "Daily completate", "Completamento Daily",
+                "Tempo medio", "PvP avviati", "PvP completati", "Premium", "Replay",
+              ];
+              values.forEach((value, index) => {
+                const td = document.createElement("td");
+                td.textContent = String(value || 0);
+                td.dataset.label = labels[index];
+                tr.appendChild(td);
+              });
+              return tr;
+            }),
+          );
+          for (const key of Object.keys(totals)) {
+            const target = $(key);
+            if (target) target.textContent = String(totals[key]);
+          }
+          $("dailyRate").textContent = totals.dailyStarters ? `${Math.round(totals.dailyCompleters / totals.dailyStarters * 100)}%` : "—";
+          $("dailyDropoff").textContent = String(totals.dailyDropoff);
+          $("dailyTime").textContent = durationCount ? `${Math.round(durationSum / durationCount)}s` : "—";
+          $("pvpRate").textContent = totals.pvpStarters ? `${Math.round(totals.pvpCompleters / totals.pvpStarters * 100)}%` : "—";
+          for (const key of ["d1", "d3", "d7"]) $(key).textContent = retention[key][1] ? `${Math.round(retention[key][0] / retention[key][1] * 100)}%` : "—";
+          $("reportStatus").textContent =
+            `Aggiornato ${new Date(data.generatedAt).toLocaleString("it-IT")} · ${data.rows.length} giorni UTC · funnel, ritorno, tempi e provenienza sono disponibili dall’attivazione del nuovo tracciamento`;
+        } catch (error) {
+          if(sequence!==reportSequence)return;
+          $("reportStatus").textContent = error.message;
+          $("reportStatus").classList.add("error");
+        }
+      }
+      $("login").onclick = async () => {
+        try {
+          $("gateStatus").textContent = "Verifica con Pi in corso…";
+          const auth = await Pi.authenticate(["username"], () => {});
+          if (!auth?.accessToken)
+            throw new Error("Pi non ha restituito un token di accesso");
+          accessToken = auth.accessToken;
+          $("gate").classList.add("hidden");
+          $("dashboard").classList.remove("hidden");
+          await loadReport();
+        } catch (error) {
+          $("gateStatus").textContent = error.message;
+          $("gateStatus").classList.add("error");
+        }
+      };
+      $("refresh").onclick = loadReport;
+      $("days").onchange = loadReport;
+    </script>
+  </body>
+</html>
