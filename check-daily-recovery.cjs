@@ -22,6 +22,13 @@ const day=new Date().toISOString().slice(0,10),active={day,status:'active',moves
 vm.runInContext('dailyNeedsSync=false;dailyLoading=false;dailyBusy=false;',ui);
 let release,flips=0;ui.hold=()=>new Promise(r=>release=r);vm.runInContext('api=async(path,body)=>{if(body.action==="daily-flip")return hold();return {daily:null,meta:{},leaders:[]}};',ui);
 const first=ui.dailyFlip(0);assert.equal(vm.runInContext('dailyBusy',ui),true);await ui.dailyFlip(1);release({daily:{...active,firstIndex:0,firstValue:'a'},reveal:{index:0,value:'a',pending:true}});await first;assert.equal(vm.runInContext('dailyState.firstIndex',ui),0);
+// State from a resumed response must produce explicit, typed expectations.
+ui.test.set({...active,moves:'1',firstIndex:undefined});ui.calls=[];
+ui.response={daily:{...active,moves:1,firstIndex:2,firstValue:'a'},reveal:{index:2,value:'a',pending:true}};
+vm.runInContext('api=async(path,body)=>{calls.push(JSON.parse(JSON.stringify(body)));return response};',ui);
+await ui.dailyFlip(2);assert.equal(ui.calls[0].expectedMoves,1);assert.equal(ui.calls[0].expectedFirstIndex,null);
+assert.equal(ui.dailyMoveExpectation({...active,firstIndex:'0'}).expectedFirstIndex,0);
+for(const bad of [{moves:{}},{moves:null},{moves:-1},{firstIndex:{}},{firstIndex:''},{firstIndex:12}])assert.throws(()=>ui.dailyMoveExpectation({...active,...bad}),/Invalid saved Daily state/);
 // The synchronization guard blocks both flips and paid reset until status succeeds.
 ui.calls=[];vm.runInContext('dailyNeedsSync=true;replayCredits=2;api=async(path,body)=>{calls.push(body);return {}};',ui);await ui.dailyFlip(1);await el('useReplay').onclick();assert.equal(ui.calls.length,0);
 // An obsolete status response cannot overwrite a newer response.
