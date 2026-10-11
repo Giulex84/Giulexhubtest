@@ -1021,6 +1021,20 @@
       }
       $("dailyToClassic").onclick = () => showTab("classic");
       $("dailyToPvp").onclick = () => showTab("pvp");
+      function dailyMoveExpectation(state) {
+        const integer = (value, max) => {
+          const number = typeof value === "number" ? value
+            : typeof value === "string" && /^\d+$/.test(value) ? Number(value) : NaN;
+          if (!Number.isInteger(number) || number < 0 || number > max)
+            throw new Error("Invalid saved Daily state. Restore saved progress.");
+          return number;
+        };
+        return {
+          expectedMoves: integer(state.moves, 18),
+          expectedFirstIndex: state.firstIndex == null ? null : integer(state.firstIndex, 11),
+          expectedAttemptId: state.attemptId,
+        };
+      }
       async function dailyFlip(index) {
         if (dailyBusy || dailyLoading || dailyNeedsSync) return;
         if (dailyState?.day !== new Date().toISOString().slice(0,10)) { await loadDaily(); return; }
@@ -1031,9 +1045,7 @@
           const d = await api("/api/game-state", {
             action: "daily-flip",
             day: dailyState.day,
-            expectedMoves: dailyState.moves,
-            expectedFirstIndex: dailyState.firstIndex,
-            expectedAttemptId: dailyState.attemptId,
+            ...dailyMoveExpectation(dailyState),
             index,
           });
           dailyPendingIndex = null;
