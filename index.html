@@ -459,7 +459,10 @@
               ★ Premium active
             </div>
             <div class="leaderboard">
-              <h3>CLASSIC WEEKLY TOP 10 <span id="classicOwnPosition"></span></h3>
+              <h3>CLASSIC WEEKLY TOP 10 <span id="classicOwnPosition"></span></h3><p class="muted">Points earned this UTC week · resets Monday 00:00 UTC. Your personal total and level stay saved.</p>
+              <p class="muted">Weekly gold, silver and bronze badges · equal points share a rank. Cosmetic recognition only; Premium affects Classic scoring. First awards: 19 October 2026.</p>
+              <div id="classicBadges" aria-live="polite"></div>
+              <details><summary>Weekly Hall of Fame</summary><div id="classicHall"></div></details>
               <ol id="classicLeaders">
                 <li>Complete a level to enter this week’s ranking</li>
               </ol>
@@ -626,15 +629,21 @@
       function setStatus(t) {
         $("status").textContent = t;
       }
-      async function saveProgress() {
-        if (accessToken && storeReady)
-          try {
-            await api("/api/game-state", {
-              action: "save",
-              state: { level, lives, score },
-            });
-          } catch {}
+      let classicSaveQueue = Promise.resolve();
+      function queueClassicProgress(completed=false) {
+        if (!accessToken || !storeReady) return Promise.resolve();
+        const snapshot={level,lives,score};
+        const task=classicSaveQueue.then(async()=>{
+          const body=completed?{action:"classic-complete",...snapshot}:{action:"save",state:snapshot};
+          let data;
+          try { data=await api("/api/game-state",body); }
+          catch(error) { if(error.status && error.status<500)throw error; data=await api("/api/game-state",body); }
+          if(completed)renderClassicLeaderboard(data);
+        });
+        classicSaveQueue=task.catch(error=>setStatus("Classic save failed · "+error.message+" · retry before closing"));
+        return classicSaveQueue;
       }
+      async function saveProgress() { return queueClassicProgress(false); }
       async function loadProgress() {
         if (!storeReady) return false;
         const d = await api("/api/game-state", { action: "load" });
@@ -789,28 +798,21 @@
           console.warn("Classic leaderboard", error.message);
         }
       }
+      function renderClassicAwards(data) {
+        const medals={1:"🥇 Weekly Champion",2:"🥈 Weekly Silver",3:"🥉 Weekly Bronze"};
+        const root=$("classicBadges");if(root){root.innerHTML="";const title=document.createElement("h4");title.textContent="Your weekly badges";root.appendChild(title);for(const badge of data?.badges||[]){const line=document.createElement("p");line.textContent=`${medals[badge.rank]||"Weekly badge"} · ${badge.week} · ${badge.score} pts`;root.appendChild(line);}if(!data?.badges?.length){const line=document.createElement("p");line.textContent="Finish in the top three to earn a permanent badge. Equal scores share the same rank.";root.appendChild(line);}}
+        const hall=$("classicHall");if(hall){hall.innerHTML="";for(const week of data?.hall||[]){const title=document.createElement("h4");title.textContent="Week of "+week.week;hall.appendChild(title);for(const winner of week.winners||[]){const line=document.createElement("p");line.textContent=`${medals[winner.rank]} · @${winner.username} · ${winner.score} pts`;hall.appendChild(line);}}if(!data?.hall?.length)hall.textContent="No closed weekly competitions yet.";}
+      }
       function renderClassicLeaderboard(data) {
+        renderClassicAwards(data);
         $("classicOwnPosition").textContent = data?.position ? `Your rank #${data.position}` : "";
         $("classicLeaders").innerHTML = data?.leaders?.length
           ? data.leaders.map((entry) =>
-              `<li><b>@${escapeHtml(entry.username)}</b><small>Level ${entry.level} · ${entry.score} pts</small></li>`
+              `<li value="${Number(entry.rank)}"><b>@${escapeHtml(entry.username)}</b><small>Level ${entry.level} · ${entry.score} weekly pts</small></li>`
             ).join("")
           : "<li>Complete a level to enter this week’s ranking</li>";
       }
-      async function submitClassicCompletion() {
-        if (!storeReady) return;
-        try {
-          const data = await api("/api/game-state", {
-            action: "classic-complete",
-            level,
-            score,
-            lives,
-          });
-          renderClassicLeaderboard(data);
-        } catch (error) {
-          console.warn("Classic result", error.message);
-        }
-      }
+      async function submitClassicCompletion() { return queueClassicProgress(true); }
       $("restart").onclick = () => {
         lives = Math.min(5 + level - 1, 10);
         initGame(true);
