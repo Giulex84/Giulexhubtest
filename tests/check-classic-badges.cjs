@@ -1,7 +1,7 @@
-const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),ts=require('typescript'),{startRedis}=require('./redis-helper.cjs');
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),{startRedis}=require('./redis-helper.cjs');
 (async()=>{const r=await startRedis();if(!r)return;try{
 const test=fs.existsSync('lib/store.js'),P=test?'arena:test:':'arena:';let now='2026-10-12T08:00:00Z';class Clock extends Date{constructor(...a){super(...(a.length?a:[now]))}static now(){return Date.parse(now)}}
-const m={exports:{}},ctx={module:m,exports:m.exports,process:{env:{UPSTASH_REDIS_REST_URL:'https://redis.test.invalid',UPSTASH_REDIS_REST_TOKEN:'test'}},fetch:r.fetch,Date:Clock,Math,console};vm.createContext(ctx);vm.runInContext(ts.transpileModule(fs.readFileSync(test?'lib/store.js':'lib/store.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,ctx);const s=m.exports;
+const m={exports:{}},ctx={module:m,exports:m.exports,process:{env:{UPSTASH_REDIS_REST_URL:'https://redis.test.invalid',UPSTASH_REDIS_REST_TOKEN:'test'}},fetch:r.fetch,Date:Clock,Math,console};vm.createContext(ctx);const source=fs.readFileSync(test?'lib/store.js':'lib/store.ts','utf8');const code=test?source:require('typescript').transpileModule(source,{compilerOptions:{module:require('typescript').ModuleKind.CommonJS}}).outputText;vm.runInContext(code,ctx);const s=m.exports;
 async function seed(u,level=4){await r.command(['SET',P+'game:'+u,JSON.stringify({score:1000,level,lives:5})]);await s.saveProfile(u,u+'Name')}
 for(const [u,l,points]of [['a',94,100],['b',4,100],['c',4,90],['d',4,90]]){await seed(u,l);await s.recordClassicResult(u,l+1,1000+points,6)}
 assert.equal((await s.getClassicLeaderboard('a')).position,1);assert.equal((await s.getClassicLeaderboard('b')).position,1);assert.equal((await s.getClassicLeaderboard('c')).position,3);assert.equal((await s.getClassicLeaderboard('a')).badges.length,0);
