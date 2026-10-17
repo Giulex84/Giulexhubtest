@@ -639,6 +639,7 @@
           try { data=await api("/api/game-state",body); }
           catch(error) { if(error.status && error.status<500)throw error; data=await api("/api/game-state",body); }
           if(completed)renderClassicLeaderboard(data);
+          setStatus("Online · Classic saved");
         });
         classicSaveQueue=task.catch(error=>setStatus("Classic save failed · "+error.message+" · retry before closing"));
         return classicSaveQueue;
