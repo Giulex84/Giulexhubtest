@@ -81,3 +81,8 @@ Classic weekly points count earned score increments, not lifetime totals. Histor
 The first eligible week starts October 12 UTC; first awards are available October 19 UTC. Closed weeks are finalized atomically on the next authenticated Classic leaderboard request, not by a scheduled job. All enrolled weeks are reconciled, so players can return late and still receive their badges. New badge-eligible weekly entries, completed award snapshots and per-user badges persist; pre-existing legacy weeks are not awarded or reset. The Hall of Fame displays the eight latest closed weeks; personal badges remain permanent. No Pi payouts, frames or paid advantages are introduced.
 
 Progress, points and rank writes are atomic. Lower-score stale saves cannot roll back historical progress. Finalized weeks reject delayed writes before mutation and the client can retry against the current week. Existing scores saved before the weekly-rule deployment cannot be safely backfilled from lifetime totals. All Testnet key prefixes and payment settings remain isolated.
+
+
+## Minimal analytics release
+
+New Testnet analytics collection is disabled at the telemetry boundary. Existing historical data is preserved under the existing retention policy. Gameplay persistence, security controls and payment test receipts are unchanged.

@@ -8,5 +8,6 @@ const store={isStoreConfigured:()=>true,claimPayment:async()=>{},markPaymentPend
 const handler=load('api/pi-payment.js',p=>p.endsWith('/pi')?apiPi:p.endsWith('/metrics')?{safeRecordMetric:async()=>{}}:store);
 async function call(action){lookup=0;const res={setHeader(){},status(n){this.code=n;return this},json(d){this.body=d;return this}};await handler({method:'POST',body:{action,paymentId:payment.identifier,txid:'test-tx'}},res);return res}
 (async()=>{assert.equal((await call('recover')).code,200);assert.equal(deliveries,1);changed=true;assert.equal((await call('recover')).code,400);assert.equal(deliveries,1);// An operation straddling midnight keeps its server-selected event day.
-let metricDay;const metrics=load('lib/metrics.js',p=>p==='crypto'?require('crypto'):p==='./pi'?{getServerApiKey:()=> 'test-only'}:{recordMetric:async d=>{metricDay=d;return true}});await metrics.safeRecordMetric('tester','daily_completed','id',60,'2026-10-06');assert.equal(metricDay,'2026-10-06');
+let metricDay;const metrics=load('lib/metrics.js',p=>p==='crypto'?require('crypto'):p==='./pi'?{getServerApiKey:()=> 'test-only'}:{recordMetric:async d=>{metricDay=d;return true}});await metrics.safeRecordMetric('tester','daily_completed','id',60,'2026-10-06');assert.equal(metricDay,undefined,'Testnet telemetry is disabled');
 console.log('Payments: server product/user/network/amount validation and final recovery revalidation passed; no real Pi call.');})().catch(e=>{console.error(e);process.exitCode=1});
+

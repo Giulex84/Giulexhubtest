@@ -880,10 +880,7 @@
       $("dailyTab").onclick = () => showTab("daily");
       $("pvpTab").onclick = () => showTab("pvp");
       $("openDaily").onclick = () => showTab(dailyState && dailyState.status !== "active" ? "classic" : "daily");
-      async function recordClientEvent(event) {
-        if (!storeReady) return;
-        try { await api("/api/game-state", { action: "client-event", event }); } catch {}
-      }
+      async function recordClientEvent(event) { return; }
       async function loadDaily(silent = false) {
         if (dailyBusy && !dailyNeedsSync) return;
         const requestId = ++dailyLoadId;
@@ -1357,4 +1354,5 @@
     </script>
   </body>
 </html>
+
 
