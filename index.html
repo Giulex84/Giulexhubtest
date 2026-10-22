@@ -440,7 +440,7 @@
 })();
 </script>
       <section class="panel">
-        <div class="preferences"><label>Language <select id="app-language" aria-label="Language"><option value="en">English</option><option value="it">Italiano</option><option value="es">Español</option><option value="fr">Français</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="id">Bahasa Indonesia</option><option value="zh">中文</option></select></label><label>Card reveal time <select id="reveal-speed"><option value="650">Standard</option><option value="1100">Longer</option></select></label></div>
+        <div class="preferences"><label>Language <select id="app-language" aria-label="Language"><option value="en">English</option><option value="it">Italiano</option><option value="es">Español</option><option value="fr">Français</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="id">Bahasa Indonesia</option><option value="zh">中文</option></select></label></div>
         <div id="status" class="status" role="status" aria-live="polite">Sign in with Pi to play</div>
         <button id="reconnect" class="action secondary hidden">SIGN IN AGAIN</button>
         <a class="help-link" href="mailto:glnmigliaccio@gmail.com?subject=Arena%20Testnet%20support">Help and support</a>
@@ -457,7 +457,7 @@
             </div>
             <button id="openDaily" class="action">PLAY NOW</button>
           </div>
-          <details id="how-to-play" class="help-guide"><summary>How to play</summary><p>Classic: match pairs. A wrong pair costs one life; a match restores one life, up to ten. Consecutive matches build a combo. Restarting a level is free.</p><p>Daily: one free challenge per UTC day, six pairs and eighteen moves. Two cards count as one move. Resume your saved challenge during the same UTC day.</p><p>PvP: an asynchronous duel. Both players use the same deck and can play at different times. Complete the board; fewer moves wins, then score breaks a tie. A completed board beats an unfinished board.</p><p>Progress and purchases belong to your verified Pi account. Classic now saves the current board too. Avoid playing Classic on two devices at once.</p></details>
+          <details id="how-to-play" class="help-guide"><summary>How to play</summary><p>Classic: match pairs, build combos and keep your lives.</p><p>Daily: 6 pairs, 18 moves, one free challenge a day.</p><p>PvP: complete the same board in fewer moves than your opponent.</p></details>
           <nav class="tabs" aria-label="Game modes" role="tablist">
             <button id="classicTab" role="tab" aria-controls="classic" aria-selected="true" class="tab active">Classic</button
             ><button id="dailyTab" role="tab" aria-controls="daily" aria-selected="false" class="tab">Daily</button
@@ -500,8 +500,7 @@
               <span id="moves" class="moves">0 / 18 moves</span>
             </div>
             <p class="intro">
-              Free daily challenge: find all 6 pairs in 18 moves. Press START below, then tap cards to play. Your progress is saved automatically,
-              so you can leave and resume today.
+              Find 6 pairs in 18 moves. Your progress is saved.
             </p>
             <div class="daily-progress" aria-label="Daily progress"><span id="dailyProgress"></span></div>
             <div
@@ -666,7 +665,6 @@
       function setStatus(t) { $("status").textContent = t;for(const mode of ["classic","daily","pvp"]){if($(mode).classList.contains?.("hidden")===false)$(mode+"Feedback").textContent=t;} }
       function safeRead(key) { try { return localStorage.getItem(key); } catch { return null; } }
       function safeWrite(key,value) { try { localStorage.setItem(key,value); } catch {} }
-      function revealDelay() { return safeRead("arena-reveal-ms") === "1100" ? 1100 : 650; }
       function userError(error) {
         if (error?.status === 401) { if(storeReady)$("reconnect").classList.remove("hidden"); return "Your session expired. Sign in again."; }
         if (error?.status === 503 || error?.status >= 500) return "The service is temporarily unavailable. Please retry shortly.";
@@ -686,8 +684,6 @@
       $("purchaseCancel").onclick=closePurchase;
       $("purchaseConfirm").onclick=()=>{const action=pendingPurchase;closePurchase();if(action)action();};
       $("purchaseDialog").addEventListener?.("cancel",()=>{pendingPurchase=null;});
-      $("reveal-speed").value=String(revealDelay());
-      $("reveal-speed").onchange=()=>safeWrite("arena-reveal-ms",$("reveal-speed").value);
       window.addEventListener?.("beforeunload",event=>{if(classicSaveFailed||classicPendingSaves>0||selected.length===2){event.preventDefault();event.returnValue="";}});
       $("reconnect").onclick=async()=>{
         if(loginBusy)return;loginBusy=true;$("reconnect").disabled=true;
@@ -765,7 +761,7 @@
           signed.append("Signed in as ");name.textContent=session.username?"@"+session.username:"Verified Pioneer";signed.appendChild(name);identity.replaceChildren(signed);
           $("login").classList.add("hidden");$("app").classList.remove("hidden");
           $("premium").classList.toggle("hidden",premium);$("premiumActive").classList.toggle("hidden",!premium);$("premium").disabled=false;
-          $("how-to-play").open=!safeRead("arena-guide-seen");safeWrite("arena-guide-seen","1");
+          $("how-to-play").open=false;
           loadClassicLeaderboard();
           if(new URLSearchParams(location.search).get("mode")==="daily")showTab("daily");else loadDaily(true);
           setStatus(restored?"Online · progress restored":"Online · verified by Pi");
@@ -831,7 +827,7 @@
         c.flipped = true;
         selected.push(id);
         renderClassic();
-        if (selected.length === 2) setTimeout(checkMatch, revealDelay());
+        if (selected.length === 2) setTimeout(checkMatch, 420);
         else saveProgress();
       }
       function checkMatch() {
@@ -1142,7 +1138,7 @@
             if (!d.reveal.pending) {
               dailyVisible[d.reveal.firstIndex] = d.reveal.firstValue;
               renderDaily();
-              await new Promise((r) => setTimeout(r, revealDelay()));
+              await new Promise((r) => setTimeout(r, 180));
               if (!d.reveal.matched) {
                 delete dailyVisible[d.reveal.index];
                 delete dailyVisible[d.reveal.firstIndex];
@@ -1431,7 +1427,7 @@
             if (!d.reveal.pending) {
               pvpVisible[d.reveal.firstIndex] = d.reveal.firstValue;
               renderPvp();
-              await new Promise((r) => setTimeout(r, revealDelay()));
+              await new Promise((r) => setTimeout(r, 180));
               if (!d.reveal.matched) {
                 delete pvpVisible[d.reveal.index];
                 delete pvpVisible[d.reveal.firstIndex];
