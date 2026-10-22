@@ -11,9 +11,12 @@ async function handler(req, res) {
     const token = (0, pi_1.bearerFromRequest)(req);
     if (!token)
         return res.status(401).json({ error: "Missing Pi access token" });
+    let user;
+    try { user = await (0, pi_1.verifyAccessToken)(token); }
+    catch { return res.status(401).json({ error: "Pi authentication could not be verified" }); }
     try {
-        const user = await (0, pi_1.verifyAccessToken)(token);
         const storeReady = (0, store_1.isStoreConfigured)();
+        if (!storeReady) return res.status(503).json({error:"The service is temporarily unavailable"});
         if (storeReady) {
             const requestedSource = typeof req.body?.source === "string" ? req.body.source.toLowerCase() : "direct";
             const source = ["fireside", "staking", "share"].includes(requestedSource) ? requestedSource : "direct";
@@ -30,8 +33,9 @@ async function handler(req, res) {
         });
     }
     catch {
-        return res.status(401).json({ error: "Pi authentication could not be verified" });
+        return res.status(503).json({ error: "The service is temporarily unavailable" });
     }
 }
 
 module.exports = exports.default;
+

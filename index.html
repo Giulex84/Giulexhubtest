@@ -4,12 +4,13 @@
     <meta charset="utf-8" />
     <meta
       name="viewport"
-      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
+      content="width=device-width,initial-scale=1"
     />
     <meta
       name="description"
       content="Arena is a skill-based memory game for Pi Testnet."
     />
+    <script src="/ux-i18n.js" defer></script>
     <title>Arena · Pi Testnet</title>
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
     <script>
@@ -408,6 +409,7 @@
           font-size: 1.3rem;
         }
       }
+      .preferences{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}.preferences label{display:flex;flex:1;flex-direction:column;gap:6px;font-size:.85rem}.preferences select{max-width:100%;min-height:44px;padding:8px;border-radius:8px;background:#10152b;color:#fff;border:1px solid #6c77a5;font:inherit}.help-link{display:inline-block;padding:10px 0;color:var(--cyan)}.help-guide{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:12px;line-height:1.6}.help-guide summary{cursor:pointer;min-height:32px}.purchase-note{font-size:.9rem;line-height:1.6;color:var(--muted)}button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}button:disabled{cursor:wait}#status{margin:0 0 8px;font-size:.9rem}#classicSaveStatus{font-size:.85rem;min-height:1.3em;color:var(--cyan)}dialog{width:min(90vw,440px);max-height:85vh;overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--cyan);border-radius:18px;padding:24px;line-height:1.6}dialog::backdrop{background:#000b}#notice-controls{display:none}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
     </style>
   </head>
   <body>
@@ -438,6 +440,10 @@
 })();
 </script>
       <section class="panel">
+        <div class="preferences"><label>Language <select id="app-language" aria-label="Language"><option value="en">English</option><option value="it">Italiano</option><option value="es">Español</option><option value="fr">Français</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="id">Bahasa Indonesia</option><option value="zh">中文</option></select></label><label>Card reveal time <select id="reveal-speed"><option value="650">Standard</option><option value="1100">Longer</option></select></label></div>
+        <div id="status" class="status" role="status" aria-live="polite">Sign in with Pi to play</div>
+        <button id="reconnect" class="action secondary hidden">SIGN IN AGAIN</button>
+        <a class="help-link" href="mailto:glnmigliaccio@gmail.com?subject=Arena%20Testnet%20support">Help and support</a>
         <div id="identity" class="identity">
           <span>Sign in with Pi to play</span><strong id="sync">TESTNET</strong>
         </div>
@@ -451,12 +457,13 @@
             </div>
             <button id="openDaily" class="action">PLAY NOW</button>
           </div>
-          <nav class="tabs">
-            <button id="classicTab" class="tab active">Classic</button
-            ><button id="dailyTab" class="tab">Daily</button
-            ><button id="pvpTab" class="tab">PvP</button>
+          <details id="how-to-play" class="help-guide"><summary>How to play</summary><p>Classic: match pairs. A wrong pair costs one life; a match restores one life, up to ten. Consecutive matches build a combo. Restarting a level is free.</p><p>Daily: one free challenge per UTC day, six pairs and eighteen moves. Two cards count as one move. Resume your saved challenge during the same UTC day.</p><p>PvP: an asynchronous duel. Both players use the same deck and can play at different times. Complete the board; fewer moves wins, then score breaks a tie. A completed board beats an unfinished board.</p><p>Progress and purchases belong to your verified Pi account. Classic now saves the current board too. Avoid playing Classic on two devices at once.</p></details>
+          <nav class="tabs" aria-label="Game modes" role="tablist">
+            <button id="classicTab" role="tab" aria-controls="classic" aria-selected="true" class="tab active">Classic</button
+            ><button id="dailyTab" role="tab" aria-controls="daily" aria-selected="false" class="tab">Daily</button
+            ><button id="pvpTab" role="tab" aria-controls="pvp" aria-selected="false" class="tab">PvP</button>
           </nav>
-          <section id="classic">
+          <section id="classic" role="tabpanel" aria-labelledby="classicTab">
             <div class="stats">
               <div class="stat">LEVEL<b id="lvl">1</b></div>
               <div class="stat">HP<b id="lives">5</b></div>
@@ -465,13 +472,15 @@
             <p class="intro">
               Match every pair, build combos and progress through larger arenas.
             </p>
-            <div id="combo" class="combo"></div>
+            <button id="retryClassicSave" class="action secondary hidden">RETRY SAVE</button><div id="classicFeedback" role="status" aria-live="polite"></div><div id="classicSaveStatus" role="status" aria-live="polite"></div><div id="combo" class="combo"></div>
             <div id="grid" class="grid"></div>
             <button id="restart" class="action secondary hidden">
               RESTART LEVEL</button
             ><button id="premium" class="action premium">
               UNLOCK PREMIUM · 1 π
             </button>
+            <p class="purchase-note">Premium costs 1 test π once: unlimited Classic lives and double base points in Classic. It does not change Daily or PvP rules. Test π has no monetary value.</p>
+            <div id="premiumFeedback" role="status" aria-live="polite"></div>
             <div id="premiumActive" class="daily-result hidden">
               ★ Premium active
             </div>
@@ -485,7 +494,7 @@
               </ol>
             </div>
           </section>
-          <section id="daily" class="hidden">
+          <section id="daily" role="tabpanel" aria-labelledby="dailyTab" class="hidden">
             <div class="daily-head">
               <h2>Today’s challenge</h2>
               <span id="moves" class="moves">0 / 18 moves</span>
@@ -502,7 +511,7 @@
             ></div>
             <button id="syncDaily" class="action secondary hidden">RESTORE SAVED DAILY</button>
             <button id="startDaily" class="action">START DAILY ARENA</button>
-            <div id="dailyResult" class="daily-result hidden"></div>
+            <div id="dailyFeedback" role="status" aria-live="polite"></div><div id="dailyResult" class="daily-result hidden"></div>
             <div class="daily-meta">
               <span>TODAY ATTEMPTS<b id="dailyAttempts">0</b></span
               ><span>PERSONAL BEST<b id="dailyBest">—</b></span
@@ -515,6 +524,8 @@
             <div class="ticket-row">
               <span>Daily Replay Tickets</span><b id="replayCredits">0</b>
             </div>
+            <p class="purchase-note">A ticket costs 0.1 test π and adds one replay credit. Buying does not start or replace a challenge. Use one credit after finishing today’s Daily to start a new board; your personal best stays saved.</p>
+            <div id="replayFeedback" role="status" aria-live="polite"></div>
             <button id="useReplay" class="action hidden">
               USE 1 TICKET · NEW CHALLENGE</button
             ><button id="buyReplay" class="action premium">
@@ -527,7 +538,7 @@
               </ol>
             </div>
           </section>
-          <section id="pvp" class="hidden">
+          <section id="pvp" role="tabpanel" aria-labelledby="pvpTab" class="hidden">
             <div class="daily-head">
               <h2>Async PvP</h2>
               <span id="pvpMoves" class="moves">0 / 18</span>
@@ -549,9 +560,11 @@
             ><button id="botPvp" class="action secondary hidden">
               PLAY ARENA BOT
             </button>
-            <div id="pvpResult" class="pvp-result hidden"></div>
+            <button id="cancelPvp" class="action secondary hidden">CANCEL SEARCH</button>
+            <p id="pvpWaitHelp" class="muted hidden">You can play Classic while waiting. Open PvP again to check the result. The bot is an optional computer opponent.</p>
+            <div id="pvpFeedback" role="status" aria-live="polite"></div><div id="pvpResult" class="pvp-result hidden"></div>
           </section>
-          <div id="status" class="status">Ready.</div>
+
           <div class="note">
             Gameplay points have no cash value. Daily and PvP results do not
             award Pi.
@@ -559,9 +572,10 @@
         </div>
       </section>
       <footer>
-        <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+        <a href="mailto:glnmigliaccio@gmail.com?subject=Arena%20Testnet%20support">Help and support</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
       </footer>
     </main>
+    <dialog id="purchaseDialog" aria-labelledby="purchaseTitle"><h2 id="purchaseTitle"></h2><p id="purchaseDescription"></p><button id="purchaseConfirm" class="action">CONTINUE TO PI WALLET</button><button id="purchaseCancel" class="action secondary">CANCEL</button></dialog>
     <script>
       const symbols = [
           "⚔",
@@ -590,6 +604,11 @@
         replayCredits = 0,
         storeReady = false,
         cards = [],
+        savedClassicBoard = null,
+        authenticatedUid = null,
+        classicPendingSaves = 0,
+        loginBusy = false,
+        classicSaveFailed = false,
         selected = [],
         score = 0,
         level = 1,
@@ -607,6 +626,7 @@
         dailyPendingIndex = null,
         paymentBusy = false,
         pvpState = null,
+        pvpLoadId = 0,
         pvpVisible = {},
         pvpBusy = false,
         pvpPendingIndex = null,
@@ -643,29 +663,70 @@
           clearTimeout(timeout);
         }
       }
-      function setStatus(t) {
-        $("status").textContent = t;
+      function setStatus(t) { $("status").textContent = t;for(const mode of ["classic","daily","pvp"]){if($(mode).classList.contains?.("hidden")===false)$(mode+"Feedback").textContent=t;} }
+      function safeRead(key) { try { return localStorage.getItem(key); } catch { return null; } }
+      function safeWrite(key,value) { try { localStorage.setItem(key,value); } catch {} }
+      function revealDelay() { return safeRead("arena-reveal-ms") === "1100" ? 1100 : 650; }
+      function userError(error) {
+        if (error?.status === 401) { if(storeReady)$("reconnect").classList.remove("hidden"); return "Your session expired. Sign in again."; }
+        if (error?.status === 503 || error?.status >= 500) return "The service is temporarily unavailable. Please retry shortly.";
+        if (error?.timedOut || error?.name === "TypeError") return "The connection is slow or unavailable. Please retry.";
+        return "The action could not be completed. Please retry or contact support.";
       }
+      let pendingPurchase = null;
+      function confirmPurchase(product, callback) {
+        if (paymentBusy || $("purchaseDialog").open) return;
+        const premiumPurchase=product==="premium";
+        $("purchaseTitle").textContent=premiumPurchase?"Classic Premium · 1 test π":"Replay Ticket · 0.1 test π";
+        $("purchaseDescription").textContent=premiumPurchase?"One payment unlocks unlimited Classic lives and double base points in Classic. Daily and PvP are unchanged. The current board is preserved. Test π has no monetary value.":"Buying adds one replay credit without replacing your current Daily. After finishing today’s challenge, using one credit starts a new board. Your best result is kept. Test π has no monetary value.";
+        pendingPurchase=callback;
+        const d=$("purchaseDialog"); if(d.showModal)d.showModal();else d.setAttribute("open","");
+      }
+      function closePurchase(){ const d=$("purchaseDialog");if(d.close)d.close();else d.removeAttribute("open");pendingPurchase=null; }
+      $("purchaseCancel").onclick=closePurchase;
+      $("purchaseConfirm").onclick=()=>{const action=pendingPurchase;closePurchase();if(action)action();};
+      $("purchaseDialog").addEventListener?.("cancel",()=>{pendingPurchase=null;});
+      $("reveal-speed").value=String(revealDelay());
+      $("reveal-speed").onchange=()=>safeWrite("arena-reveal-ms",$("reveal-speed").value);
+      window.addEventListener?.("beforeunload",event=>{if(classicSaveFailed||classicPendingSaves>0||selected.length===2){event.preventDefault();event.returnValue="";}});
+      $("reconnect").onclick=async()=>{
+        if(loginBusy)return;loginBusy=true;$("reconnect").disabled=true;
+        try{
+          if(!window.Pi?.authenticate)throw Error("Pi unavailable");
+          const a=await Pi.authenticate(["username","payments"],recover);if(!a?.accessToken)throw Error("Missing token");
+          accessToken=a.accessToken;const session=await api("/api/auth",{});if(!session.storeReady)throw Object.assign(new Error("Store unavailable"),{status:503});
+          if(session.uid!==authenticatedUid){accessToken=null;arenaSession=null;throw Object.assign(new Error("Different account"),{differentAccount:true});}
+          arenaSession=session.arenaSession||null;premium=!!session.premium;replayCredits=Number(session.replayCredits)||0;
+          if(premium)lives=999;renderClassic();$("premium").classList.toggle("hidden",premium);$("premiumActive").classList.toggle("hidden",!premium);$("reconnect").classList.add("hidden");setStatus("Session restored. Your current game is preserved.");
+          if(classicSaveFailed)await saveProgress();
+        }catch(error){setStatus(error.differentAccount?"Sign in with the same Pi account to keep this game. Reload to switch accounts.":userError(error));}finally{loginBusy=false;$("reconnect").disabled=false;}
+      };
       let classicSaveQueue = Promise.resolve();
       function queueClassicProgress(completed=false) {
         if (!accessToken || !storeReady) return Promise.resolve();
-        const snapshot={level,lives,score};
+        classicPendingSaves++;
+        const snapshot={level,lives,score,board:completed?null:{level,cards:cards.map(c=>({value:c.value,matched:c.matched,flipped:c.matched||(selected.length===1&&c.flipped)})),combo}};
+        $("classicSaveStatus").textContent="Saving progress…";
         const task=classicSaveQueue.then(async()=>{
           const body=completed?{action:"classic-complete",...snapshot}:{action:"save",state:snapshot};
           let data;
           try { data=await api("/api/game-state",body); }
           catch(error) { if(error.status && error.status<500)throw error; data=await api("/api/game-state",body); }
           if(completed)renderClassicLeaderboard(data);
-          setStatus("Online · Classic saved");
+          $("retryClassicSave").classList.add("hidden");
+          classicSaveFailed=false;
+          $("classicSaveStatus").textContent="Progress saved";
         });
-        classicSaveQueue=task.catch(error=>setStatus("Classic save failed · "+error.message+" · retry before closing"));
+        classicSaveQueue=task.catch(error=>{classicSaveFailed=true;$("classicSaveStatus").textContent="Progress not saved. Keep this page open and retry.";$("retryClassicSave").classList.remove("hidden");setStatus(userError(error));}).finally(()=>{classicPendingSaves--;});
         return classicSaveQueue;
       }
+      $("retryClassicSave").onclick=()=>saveProgress();
       async function saveProgress() { return queueClassicProgress(false); }
       async function loadProgress() {
         if (!storeReady) return false;
         const d = await api("/api/game-state", { action: "load" });
         if (!d.state) return false;
+        savedClassicBoard = d.state.board || null;
         level = Math.max(1, Number(d.state.level) || 1);
         score = Math.max(0, Number(d.state.score) || 0);
         lives = Math.max(0, Number(d.state.lives) || 0);
@@ -686,61 +747,47 @@
           } catch {}
       }
       $("login").onclick = async () => {
+        if(loginBusy)return;
+        loginBusy=true;$("login").disabled=true;$("login").textContent="SIGNING IN…";
         try {
+          if(!window.Pi?.authenticate) throw Object.assign(new Error("Pi Browser required"),{piBrowser:true});
           setStatus("Authenticating with Pi…");
-          const a = await Pi.authenticate(["username", "payments"], recover);
-          if (!a?.accessToken) throw Error("Pi did not return an access token");
-          accessToken = a.accessToken;
-          const incoming = new URLSearchParams(location.search).get("source") || new URLSearchParams(location.search).get("ref");
-          if (incoming) localStorage.setItem("arena-source", incoming.toLowerCase());
-          const source = localStorage.getItem("arena-source") || "direct";
-          const s = await api("/api/auth", { source });
-          arenaSession = s.arenaSession || null;
-          premium = !!s.premium;
-          replayCredits = Number(s.replayCredits) || 0;
-          storeReady = !!s.storeReady;
-          const identity = $("identity"),
-            signed = document.createElement("span"),
-            name = document.createElement("strong"),
-            synced = document.createElement("strong");
-          identity.replaceChildren();
-          signed.append("Signed in as ");
-          name.textContent = s.username ? "@" + s.username : "Verified Pioneer";
-          signed.appendChild(name);
-          synced.textContent = "SYNCED";
-          identity.append(signed, synced);
-          $("login").classList.add("hidden");
-          $("app").classList.remove("hidden");
-          $("premium").classList.toggle("hidden", premium);
-          $("premiumActive").classList.toggle("hidden", !premium);
-          $("premium").disabled = !storeReady;
-          const restored = await loadProgress();
-          initGame(restored);
-          const requestedMode = new URLSearchParams(location.search).get("mode");
-          if (storeReady) {
-            loadClassicLeaderboard();
-            if (requestedMode === "daily") showTab("daily");
-            else loadDaily(true);
-          }
-          setStatus(
-            storeReady
-              ? restored
-                ? "Online · progress restored"
-                : "Online · verified by Pi"
-              : "Persistent storage is unavailable",
-          );
-        } catch (e) {
-          setStatus(e.message);
-        }
+          const a=await Pi.authenticate(["username","payments"],recover);
+          if(!a?.accessToken)throw new Error("Missing token");
+          accessToken=a.accessToken;
+          const incoming=new URLSearchParams(location.search).get("source")||new URLSearchParams(location.search).get("ref");
+          if(incoming)safeWrite("arena-source",incoming.toLowerCase());
+          const session=await api("/api/auth",{source:safeRead("arena-source")||"direct"});
+          if(!session.storeReady)throw Object.assign(new Error("Store unavailable"),{status:503});
+          arenaSession=session.arenaSession||null;authenticatedUid=session.uid;premium=!!session.premium;replayCredits=Number(session.replayCredits)||0;storeReady=true;
+          const restored=await loadProgress();initGame(restored);
+          const identity=$("identity"),signed=document.createElement("span"),name=document.createElement("strong");
+          signed.append("Signed in as ");name.textContent=session.username?"@"+session.username:"Verified Pioneer";signed.appendChild(name);identity.replaceChildren(signed);
+          $("login").classList.add("hidden");$("app").classList.remove("hidden");
+          $("premium").classList.toggle("hidden",premium);$("premiumActive").classList.toggle("hidden",!premium);$("premium").disabled=false;
+          $("how-to-play").open=!safeRead("arena-guide-seen");safeWrite("arena-guide-seen","1");
+          loadClassicLeaderboard();
+          if(new URLSearchParams(location.search).get("mode")==="daily")showTab("daily");else loadDaily(true);
+          setStatus(restored?"Online · progress restored":"Online · verified by Pi");
+        }catch(error){
+          accessToken=null;arenaSession=null;storeReady=false;
+          $("app").classList.add("hidden");$("login").classList.remove("hidden");
+          setStatus(error.piBrowser?"Open Arena in Pi Browser to sign in.":error.status===401?"Pi sign-in could not be confirmed. Please retry.":userError(error));
+        }finally{loginBusy=false;$("login").disabled=false;$("login").textContent="SIGN IN WITH PI";}
       };
       function classicBoard(lv) {
         if (lv === 1) return { columns: 2, pairs: 2 };
-        if (lv <= 3) return { columns: 4, pairs: 8 };
+        if (lv === 2) return { columns: 4, pairs: 4 };
+        if (lv === 3) return { columns: 4, pairs: 8 };
         return { columns: 4, pairs: 10 };
       }
       function initGame(keep = false) {
         const board = classicBoard(level);
         if (!keep) lives = premium ? 999 : Math.min(5 + level - 1, 10);
+        if(keep && savedClassicBoard?.level===level && Array.isArray(savedClassicBoard.cards)) {
+          cards=savedClassicBoard.cards.map((c,id)=>({...c,id}));combo=Number(savedClassicBoard.combo)||0;selected=cards.filter(c=>c.flipped&&!c.matched).map(c=>c.id);savedClassicBoard=null;
+          $("grid").style.gridTemplateColumns=`repeat(${cards.length===4?2:4},1fr)`;renderClassic();return;
+        }
         selected = [];
         combo = 0;
         cards = [
@@ -765,6 +812,9 @@
             (c.flipped ? " flipped" : "") +
             (c.matched ? " matched" : "");
           b.textContent = c.flipped || c.matched ? c.value : "";
+          b.setAttribute("aria-label", c.flipped||c.matched ? "Card "+c.value : "Hidden card "+(c.id+1));
+          b.setAttribute("aria-pressed",String(c.flipped||c.matched));
+          b.disabled=c.matched||(!premium&&lives<=0);
           b.onclick = () => flip(c.id);
           $("grid").appendChild(b);
         });
@@ -781,7 +831,8 @@
         c.flipped = true;
         selected.push(id);
         renderClassic();
-        if (selected.length === 2) setTimeout(checkMatch, 420);
+        if (selected.length === 2) setTimeout(checkMatch, revealDelay());
+        else saveProgress();
       }
       function checkMatch() {
         const [a, b] = selected;
@@ -795,7 +846,9 @@
           if (cards.every((c) => c.matched)) {
             level++;
             submitClassicCompletion();
-            setTimeout(() => initGame(false), 700);
+            initGame(false);
+            saveProgress();
+            return;
           }
         } else {
           combo = 0;
@@ -837,11 +890,13 @@
         saveProgress();
         setStatus("Level restarted · progress preserved");
       };
-      $("premium").onclick = () => {
-        if (!accessToken || premium || !storeReady) return;
+      function startPremiumPayment() {
+        if (!accessToken || premium || !storeReady || paymentBusy) return;
         $("premium").disabled = true;
         setStatus("Opening Pi payment…");
-        Pi.createPayment(
+        $("premiumFeedback").textContent="Opening Pi payment…";
+        paymentBusy=true;
+        try { Pi.createPayment(
           {
             amount: 1,
             memo: "Arena Test Premium Unlock",
@@ -861,29 +916,41 @@
                 premium = true;
                 $("premium").classList.add("hidden");
                 $("premiumActive").classList.remove("hidden");
-                initGame(false);
+                lives=999;renderClassic();saveProgress();
+                paymentBusy=false;
+                $("premiumFeedback").textContent="Premium active on your verified Pi account";
                 setStatus("Premium active on your verified Pi account");
               } catch (e) {
+                paymentBusy=false;
+                $("reconnect").classList.remove("hidden");
+                $("reconnect").classList.remove("hidden");
+              $("premiumFeedback").textContent="Payment could not be confirmed. Check your wallet and sign in again to recover it.";
                 $("premium").disabled = false;
-                setStatus(e.message);
+                setStatus(userError(e));
               }
             },
             onCancel: () => {
+              paymentBusy=false;
               $("premium").disabled = false;
-              setStatus("Payment cancelled");
+              $("premiumFeedback").textContent="Payment cancelled";$("replayFeedback").textContent="Payment cancelled";setStatus("Payment cancelled");
             },
             onError: () => {
+              paymentBusy=false;
               $("premium").disabled = false;
-              setStatus("Payment error");
+              $("reconnect").classList.remove("hidden");
+              $("premiumFeedback").textContent="Payment could not be confirmed. Check your wallet and sign in again to recover it.";$("replayFeedback").textContent="Payment could not be confirmed. Check your wallet and sign in again to recover it.";setStatus("Payment error");
             },
           },
-        );
-      };
+        ); } catch(error) { paymentBusy=false;$("premium").disabled=false;setStatus(userError(error)); }
+      }
+      $("premium").onclick=()=>confirmPurchase("premium",startPremiumPayment);
       function showTab(name) {
         for (const tab of ["classic", "daily", "pvp"]) {
           $(tab).classList.toggle("hidden", name !== tab);
           $(`${tab}Tab`).classList.toggle("active", name === tab);
+          $(`${tab}Tab`).setAttribute("aria-selected",String(name===tab));
         }
+        if(pvpPoll){clearTimeout(pvpPoll);pvpPoll=null;}
         if (name === "daily" && storeReady) {
           if (!dailyViewRecorded) {
             dailyViewRecorded = true;
@@ -893,6 +960,7 @@
         }
         if (name === "pvp" && storeReady) loadPvp();
       }
+      for(const [index,mode] of ["classic","daily","pvp"].entries())$(mode+"Tab").addEventListener?.("keydown",event=>{if(!["ArrowLeft","ArrowRight","Home","End"].includes(event.key))return;event.preventDefault();const next=event.key==="Home"?0:event.key==="End"?2:(index+(event.key==="ArrowRight"?1:2))%3;const target=["classic","daily","pvp"][next];showTab(target);$(target+"Tab").focus();});
       $("classicTab").onclick = () => showTab("classic");
       $("dailyTab").onclick = () => showTab("daily");
       $("pvpTab").onclick = () => showTab("pvp");
@@ -917,7 +985,7 @@
           renderDaily();
           await loadLeaderboard();
         } catch (e) {
-          if (requestId === dailyLoadId && !silent) setStatus(e.message);
+          if (requestId === dailyLoadId && !silent) setStatus(userError(e));
         } finally {
           if (requestId === dailyLoadId) {
             dailyLoading = false;
@@ -999,6 +1067,7 @@
             (matched ? " matched" : "");
           b.textContent = pending ? "…" : value || "";
           b.disabled = dailyBusy || dailyLoading || dailyNeedsSync || matched || dailyState.status !== "active";
+          b.setAttribute("aria-label",value?"Card "+value:pending?"Loading card":"Hidden card "+(i+1));
           b.onclick = () => dailyFlip(i);
           $("dailyGrid").appendChild(b);
         }
@@ -1073,7 +1142,7 @@
             if (!d.reveal.pending) {
               dailyVisible[d.reveal.firstIndex] = d.reveal.firstValue;
               renderDaily();
-              await new Promise((r) => setTimeout(r, 180));
+              await new Promise((r) => setTimeout(r, revealDelay()));
               if (!d.reveal.matched) {
                 delete dailyVisible[d.reveal.index];
                 delete dailyVisible[d.reveal.firstIndex];
@@ -1125,12 +1194,13 @@
             })[c],
         );
       }
-      $("buyReplay").onclick = () => {
+      function startReplayPayment() {
         if (!accessToken || !storeReady || paymentBusy) return;
         paymentBusy = true;
         $("buyReplay").disabled = true;
         setStatus("Opening Daily Replay Ticket payment…");
-        Pi.createPayment(
+        $("replayFeedback").textContent="Opening Daily Replay Ticket payment…";
+        try { Pi.createPayment(
           {
             amount: 0.1,
             memo: "Arena Test Daily Replay Ticket",
@@ -1147,10 +1217,13 @@
                   txid,
                 });
                 replayCredits = Number(r.replayCredits) || 0;
+                $("replayFeedback").textContent="Daily Replay Ticket added ✅";
                 setStatus("Daily Replay Ticket added ✅");
                 renderDaily();
               } catch (e) {
-                setStatus(e.message);
+                $("reconnect").classList.remove("hidden");
+                $("replayFeedback").textContent="Payment could not be confirmed. Check your wallet and sign in again to recover it.";
+                setStatus(userError(e));
               } finally {
                 paymentBusy = false;
                 $("buyReplay").disabled = false;
@@ -1159,16 +1232,18 @@
             onCancel: () => {
               paymentBusy = false;
               $("buyReplay").disabled = false;
-              setStatus("Payment cancelled");
+              $("premiumFeedback").textContent="Payment cancelled";$("replayFeedback").textContent="Payment cancelled";setStatus("Payment cancelled");
             },
             onError: () => {
               paymentBusy = false;
               $("buyReplay").disabled = false;
-              setStatus("Payment error");
+              $("reconnect").classList.remove("hidden");
+              $("premiumFeedback").textContent="Payment could not be confirmed. Check your wallet and sign in again to recover it.";$("replayFeedback").textContent="Payment could not be confirmed. Check your wallet and sign in again to recover it.";setStatus("Payment error");
             },
           },
-        );
-      };
+        ); } catch(error) {paymentBusy=false;$("buyReplay").disabled=false;setStatus(userError(error));}
+      }
+      $("buyReplay").onclick=()=>confirmPurchase("replay",startReplayPayment);
       $("useReplay").onclick = async () => {
         if (dailyBusy || dailyLoading || dailyNeedsSync || replayCredits < 1) return;
         if (dailyState?.day !== new Date().toISOString().slice(0,10)) { await loadDaily(); return; }
@@ -1189,8 +1264,10 @@
         }
       };
       async function loadPvp() {
+        const requestId=++pvpLoadId;
         try {
           const d = await api("/api/game-state", { action: "pvp-status" });
+          if(requestId!==pvpLoadId)return;
           pvpState = d.pvp;
           pvpVisible = {};
           if (
@@ -1201,10 +1278,11 @@
           renderPvp();
           schedulePvpPoll();
         } catch (e) {
-          setStatus(e.message);
+          if(requestId===pvpLoadId)setStatus(userError(e));
         }
       }
       function schedulePvpPoll() {
+        if(document.hidden||$("pvp").classList.contains("hidden"))return;
         if (pvpPoll) clearTimeout(pvpPoll);
         if (
           pvpState &&
@@ -1212,9 +1290,18 @@
             (pvpState.status === "active" && pvpState.own.status !== "active") ||
             pvpState.own.rematchRequested)
         )
-          pvpPoll = setTimeout(loadPvp, 3000);
+          pvpPoll = setTimeout(loadPvp, 10000);
       }
+      $("cancelPvp").onclick=async()=>{
+        if(pvpBusy)return;++pvpLoadId;pvpBusy=true;$("cancelPvp").disabled=true;
+        try{const data=await api("/api/game-state",{action:"pvp-cancel"});pvpState=data.pvp;pvpVisible={};setStatus(data.cancelled?"Search cancelled. You can start again at any time.":"An opponent has already joined. Your duel is ready.");}
+        catch(error){setStatus(userError(error));}
+        finally{pvpBusy=false;$("cancelPvp").disabled=false;renderPvp();schedulePvpPoll();}
+      };
+      document.addEventListener?.("visibilitychange",()=>{if(document.hidden){if(pvpPoll)clearTimeout(pvpPoll);pvpPoll=null;}else if(storeReady&&!$("pvp").classList.contains("hidden"))loadPvp();});
       function renderPvp() {
+        $("cancelPvp").classList.toggle("hidden",pvpState?.status!=="waiting");
+        $("pvpWaitHelp").classList.toggle("hidden",!pvpState);
         const grid = $("pvpGrid");
         grid.innerHTML = "";
         if (!pvpState) {
@@ -1248,6 +1335,7 @@
             matched ||
             pvpState.status === "waiting" ||
             own.status !== "active";
+          b.setAttribute("aria-label",value?"Card "+value:pending?"Loading card":"Hidden card "+(i+1));
           b.onclick = () => pvpFlip(i);
           grid.appendChild(b);
         }
@@ -1272,6 +1360,7 @@
       }
       $("startPvp").onclick = async () => {
         if (pvpBusy) return;
+        ++pvpLoadId;
         pvpBusy = true;
         try {
           const d = await api("/api/game-state", { action: "pvp-start" });
@@ -1283,7 +1372,7 @@
               : "Opponent found · same deck ready",
           );
         } catch (e) {
-          setStatus(e.message);
+          setStatus(userError(e));
         } finally {
           pvpBusy = false;
           renderPvp();
@@ -1292,13 +1381,14 @@
       };
       $("botPvp").onclick = async () => {
         if (pvpBusy) return;
+        ++pvpLoadId;
         pvpBusy = true;
         try {
           const d = await api("/api/game-state", { action: "pvp-bot" });
           pvpState = d.pvp;
           setStatus("Arena Bot joined · bot opponent");
         } catch (e) {
-          setStatus(e.message);
+          setStatus(userError(e));
         } finally {
           pvpBusy = false;
           renderPvp();
@@ -1306,6 +1396,7 @@
       };
       $("rematchPvp").onclick = async () => {
         if (pvpBusy || !pvpState || pvpState.own.status === "active") return;
+        ++pvpLoadId;
         pvpBusy = true;
         renderPvp();
         try {
@@ -1318,7 +1409,7 @@
               : "Rematch requested · waiting for your opponent",
           );
         } catch (e) {
-          setStatus(e.message);
+          setStatus(userError(e));
         } finally {
           pvpBusy = false;
           renderPvp();
@@ -1327,6 +1418,7 @@
       };
       async function pvpFlip(index) {
         if (pvpBusy) return;
+        ++pvpLoadId;
         pvpBusy = true;
         pvpPendingIndex = index;
         renderPvp();
@@ -1339,7 +1431,7 @@
             if (!d.reveal.pending) {
               pvpVisible[d.reveal.firstIndex] = d.reveal.firstValue;
               renderPvp();
-              await new Promise((r) => setTimeout(r, 180));
+              await new Promise((r) => setTimeout(r, revealDelay()));
               if (!d.reveal.matched) {
                 delete pvpVisible[d.reveal.index];
                 delete pvpVisible[d.reveal.firstIndex];
@@ -1350,7 +1442,7 @@
             pvpVisible[pvpState.own.firstIndex] = pvpState.own.firstValue;
           setStatus("Online · PvP synced");
         } catch (e) {
-          setStatus(e.message);
+          setStatus(userError(e));
           if (e.timedOut) {
             try {
               const recovered = await api("/api/game-state", { action: "pvp-status" });

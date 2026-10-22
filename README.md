@@ -86,3 +86,18 @@ Progress, points and rank writes are atomic. Lower-score stale saves cannot roll
 ## Minimal analytics release
 
 New Testnet analytics collection is disabled at the telemetry boundary. Existing historical data is preserved under the existing retention policy. Gameplay persistence, security controls and payment test receipts are unchanged.
+
+
+## Testnet UX update — 22 October 2026
+
+This update is limited to Giulexhubtest (Pi Testnet). Mainnet is not part of this release.
+
+- Permanent language selection covers the game interface, dynamic messages and card labels in English, Italian, Spanish, French, Portuguese, German, Indonesian and Chinese. Local dictionaries make no translation API requests.
+- Sign-in feedback is visible before authentication; duplicate attempts are blocked. Service failures return 503 separately from invalid Pi identity (401). Reauthentication preserves the current board and checks that the Pi account has not changed.
+- Classic stores the current card arrangement, matched pairs, first revealed card and combo in the existing atomic Redis save. Older progress without a board continues to work. The new level-two board has four pairs; existing saved level-two boards with eight pairs remain valid. Score and level history are retained. Concurrent Classic sessions on different devices should be avoided.
+- Reveal timing is selectable (650 or 1100 ms). Daily and PvP remain server-controlled.
+- Premium and Replay have a review dialog before the Pi wallet opens. Test prices and payment product IDs remain unchanged (Premium 1 Test-Pi, Replay 0.1 Test-Pi). Purchasing Premium preserves the current board; Replay purchase does not automatically consume its credit. Existing server receipt validation and recovery are retained.
+- Waiting PvP searches can be cancelled under the matchmaking and match locks. An already joined duel is kept. Polling runs every ten seconds only while PvP is visible, and stops when the document is hidden.
+- Game instructions, permanent support links, local action feedback, screen-reader card names, keyboard navigation between tabs, zoom and reduced-motion support are included.
+
+Validation: `npm run check:build`; `REDIS_TEST_SERVER=/path/to/redis-server npm test`. UX regression tests cover board persistence and validation, stale snapshots, level transitions, identity vs storage errors, waiting-search cancellation and joined-duel protection. DOM-based simulated UI checks cover language switching, failed login/retry, board restoration and wallet confirmation. Real Pi Browser authorization and real Testnet wallet interactions still require a manual device check.

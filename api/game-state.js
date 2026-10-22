@@ -39,7 +39,8 @@ async function reconcileWaitingPvp(user, existing) {
         const current = await getUserPvpMatch(user.uid);
         if (current && current.status !== "waiting")
             return current;
-        const own = current || existing;
+        if(!current)return null;
+        const own = current;
         const queued = await getPvpQueue();
         if (queued && queued.uid !== user.uid) {
             const target = await getPvpMatch(queued.matchId);
@@ -177,6 +178,23 @@ async function handler(req, res) {
                 match = await reconcileWaitingPvp(user, match);
             return res.status(200).json({ pvp: publicPvp(match, user.uid) });
         }
+        if (action === "pvp-cancel") {
+            const lockId=await acquirePvpLock();
+            try {
+                const match=await getUserPvpMatch(user.uid);
+                if(!match)return res.status(200).json({cancelled:true,pvp:null});
+                const matchLock=await acquirePvpMatchLock(match.id);
+                try {
+                    const fresh=await getUserPvpMatch(user.uid);
+                    if(!fresh)return res.status(200).json({cancelled:true,pvp:null});
+                    if(fresh.id!==match.id||fresh.status!=="waiting")return res.status(200).json({cancelled:false,pvp:publicPvp(fresh,user.uid)});
+                    await clearPvpQueue(fresh.id);
+                    fresh.status="cancelled";await savePvpMatch(fresh);
+                    await clearUserPvpMatch(user.uid);
+                    return res.status(200).json({cancelled:true,pvp:null});
+                }finally{await releasePvpMatchLock(match.id,matchLock);}
+            }finally{await releasePvpLock(lockId);}
+        }
         if (action === "pvp-start") {
             const existing = await getUserPvpMatch(user.uid);
             if (existing?.status === "waiting")
@@ -292,5 +310,6 @@ async function handler(req, res) {
 ;
 
 module.exports = exports.default;
+
 
 
