@@ -96,6 +96,7 @@ async function handler(req, res) {
             await safeRecordMetric(user.uid, event, `${day}:${event}`);
             return res.status(200).json({ ok: true });
         }
+        if(action==="daily-weekly")return res.status(200).json(await require("../lib/store").getDailyWeeklyLeaderboard(user.uid));
         if (action === "daily-leaderboard")
             return res.status(200).json(await getDailyLeaderboard(user.uid, day));
         if (action === "daily-share") {

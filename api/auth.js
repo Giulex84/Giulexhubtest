@@ -23,7 +23,9 @@ async function handler(req, res) {
             await (0, store_1.saveProfile)(user.uid, user.username || null);
             await Promise.all([(0, metrics_1.safeRecordMetric)(user.uid, "login"), (0, metrics_1.safeRecordMetric)(user.uid, `source_${source}`, new Date().toISOString().slice(0, 10))]);
         }
+        const loginReward=await store_1.recordLoginReward(user.uid);
         return res.status(200).json({
+            loginReward,
             uid: user.uid,
             username: user.username || null,
             premium: storeReady ? await (0, store_1.hasPremium)(user.uid) : false,

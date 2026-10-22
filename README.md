@@ -103,3 +103,12 @@ This update is limited to Giulexhubtest (Pi Testnet). Mainnet is not part of thi
 Validation: `npm run check:build`; `REDIS_TEST_SERVER=/path/to/redis-server npm test`. UX regression tests cover board persistence and validation, stale snapshots, level transitions, identity vs storage errors, waiting-search cancellation and joined-duel protection. DOM-based simulated UI checks cover language switching, failed login/retry, board restoration and wallet confirmation. Real Pi Browser authorization and real Testnet wallet interactions still require a manual device check.
 
 UX refinement: the optional How to play guide starts collapsed and contains only three short lines. Daily instructions are shortened. Previously saved reveal-time preferences are ignored.
+
+
+## Testnet reward pilot and Classic medal carryover
+
+- Verified Pi sign-in starts a new UTC attendance run (no historical backfill). One free Replay Ticket is credited on day 7, 14, 21, etc. of a continuous run. Missing a UTC day restarts progress; previously earned credits remain. A Lua transaction makes the seventh-day grant idempotent, including concurrent sign-ins and lost replies. This is account attendance, distinct from the Daily completion streak.
+- A separate weekly Daily ranking counts only each day's original free completed attempt. All Replay attempts, including earned-ticket replays, are excluded. More completed days wins; ties use fewer total moves, higher total score, earlier final completion, then deterministic account-ID order. Monday–Sunday UTC. This is a Testnet demonstration with simulated 1.5 / 1 / 0.5 Test-Pi allocations, capped at 3 per week. There are NO Pi/Test-Pi transfers or automated payouts. Real-Pi promotion remains pending rules and applicable-policy review.
+- Weekly aggregation and ranking happen atomically in Redis. Reads retrieve the Top 10 and the caller's position rather than downloading all attempts. Completed-week simulated winner snapshots are frozen lazily and idempotently.
+- Classic scoring and existing shared-rank awards remain unchanged. A prior week's Gold/Silver/Bronze badge is now shown beside the corresponding user in the following week's Top 10, labeled as a prior-week award. Permanent personal badges and Hall of Fame are retained.
+- Regression coverage: `tests/check-rewards.cjs` exercises UTC runs, concurrent grants, lost replies, balance preservation, first-free-attempt eligibility, weekly ordering/budget/freeze and medal carryover. Existing state, entitlement, leaderboard, payment and Testnet-isolation suites also pass.
