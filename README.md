@@ -112,3 +112,8 @@ UX refinement: the optional How to play guide starts collapsed and contains only
 - Weekly aggregation and ranking happen atomically in Redis. Reads retrieve the Top 10 and the caller's position rather than downloading all attempts. Completed-week simulated winner snapshots are frozen lazily and idempotently.
 - Classic scoring and existing shared-rank awards remain unchanged. A prior week's Gold/Silver/Bronze badge is now shown beside the corresponding user in the following week's Top 10, labeled as a prior-week award. Permanent personal badges and Hall of Fame are retained.
 - Regression coverage: `tests/check-rewards.cjs` exercises UTC runs, concurrent grants, lost replies, balance preservation, first-free-attempt eligibility, weekly ordering/budget/freeze and medal carryover. Existing state, entitlement, leaderboard, payment and Testnet-isolation suites also pass.
+
+
+## Verifica del 24 ottobre 2026
+
+Vedi [RELEASE-AUDIT-2026-10-24.md](RELEASE-AUDIT-2026-10-24.md) per controlli eseguiti, correzioni Testnet e requisiti ancora aperti prima di premi in Pi reali. Il vecchio avviso del 20 ottobre è stato eliminato. Mainnet ed erogazioni restano invariati.

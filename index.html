@@ -409,7 +409,7 @@
           font-size: 1.3rem;
         }
       }
-      .preferences{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}.preferences label{display:flex;flex:1;flex-direction:column;gap:6px;font-size:.85rem}.preferences select{max-width:100%;min-height:44px;padding:8px;border-radius:8px;background:#10152b;color:#fff;border:1px solid #6c77a5;font:inherit}.help-link{display:inline-block;padding:10px 0;color:var(--cyan)}.help-guide{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:12px;line-height:1.6}.help-guide summary{cursor:pointer;min-height:32px}.purchase-note{font-size:.9rem;line-height:1.6;color:var(--muted)}button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}button:disabled{cursor:wait}#status{margin:0 0 8px;font-size:.9rem}#classicSaveStatus{font-size:.85rem;min-height:1.3em;color:var(--cyan)}dialog{width:min(90vw,440px);max-height:85vh;overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--cyan);border-radius:18px;padding:24px;line-height:1.6}dialog::backdrop{background:#000b}#notice-controls{display:none}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+      .preferences{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}.preferences label{display:flex;flex:1;flex-direction:column;gap:6px;font-size:.85rem}.preferences select{max-width:100%;min-height:44px;padding:8px;border-radius:8px;background:#10152b;color:#fff;border:1px solid #6c77a5;font:inherit}.help-link{display:inline-block;padding:10px 0;color:var(--cyan)}.help-guide{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:12px;line-height:1.6}.help-guide summary{cursor:pointer;min-height:32px}.purchase-note{font-size:.9rem;line-height:1.6;color:var(--muted)}button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}button:disabled{cursor:wait}#status{margin:0 0 8px;font-size:.9rem}#classicSaveStatus{font-size:.85rem;min-height:1.3em;color:var(--cyan)}dialog{width:min(90vw,440px);max-height:85vh;overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--cyan);border-radius:18px;padding:24px;line-height:1.6}dialog::backdrop{background:#000b}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
     </style>
   </head>
   <body>
@@ -422,24 +422,7 @@
         </div>
         <span class="badge">PI TESTNET</span>
       </header>
-<style>#service-notice{background:#172b35;border:1px solid #50cbb6;border-radius:16px;padding:18px;margin:0 0 18px;color:#f2fffc;line-height:1.55}#service-notice[hidden]{display:none}#service-notice h2{font-size:1.12rem;margin:12px 0 8px}#service-notice p{margin:8px 0}#service-notice a{color:#80efdb}#notice-controls{display:flex;align-items:center;justify-content:space-between;gap:12px}#notice-language,#notice-close{background:#102029;color:#fff;border:1px solid #71978f;border-radius:8px;padding:8px;font:inherit}#notice-close{cursor:pointer;min-width:44px;min-height:44px}</style>
-<section id="service-notice" hidden aria-labelledby="notice-title"><div id="notice-controls"><select id="notice-language" aria-label="Language / Lingua"><option value="en">English</option><option value="it">Italiano</option><option value="es">Español</option><option value="fr">Français</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="id">Bahasa Indonesia</option><option value="zh">中文</option></select><button id="notice-close" type="button" aria-label="Close notice">×</button></div><h2 id="notice-title"></h2><p id="notice-body"></p><p id="notice-help"></p><a id="notice-support" href="mailto:glnmigliaccio@gmail.com"></a></section>
-<script>
-(function(){
- const copy={"en": ["Arena is available again ⚔️", "On October 20, a temporary technical issue prevented some Pioneers from signing in. The issue has been resolved: please try again if you could not sign in.", "If you still have trouble or cannot find your progress, contact support. Thank you for your patience!", "Contact support", "Close notice"], "it": ["Arena è nuovamente disponibile ⚔️", "Il 20 ottobre un problema tecnico temporaneo ha impedito ad alcuni pionieri di accedere. Il problema è stato risolto: se non riuscivi a entrare, riprova ora.", "Se riscontri ancora difficoltà o non ritrovi i tuoi progressi, contatta l’assistenza. Grazie per la pazienza!", "Contatta l’assistenza", "Chiudi avviso"], "es": ["Arena vuelve a estar disponible ⚔️", "El 20 de octubre, un problema técnico temporal impidió que algunos Pioneers iniciaran sesión. El problema se ha resuelto: si no pudiste entrar, vuelve a intentarlo.", "Si sigues teniendo dificultades o no encuentras tu progreso, contacta con soporte. ¡Gracias por tu paciencia!", "Contactar con soporte", "Cerrar aviso"], "fr": ["Arena est de nouveau disponible ⚔️", "Le 20 octobre, un problème technique temporaire a empêché certains Pioneers de se connecter. Le problème est résolu : si vous ne pouviez pas vous connecter, réessayez.", "Si vous rencontrez encore des difficultés ou ne retrouvez pas votre progression, contactez l’assistance. Merci de votre patience !", "Contacter l’assistance", "Fermer"], "pt": ["Arena está disponível novamente ⚔️", "Em 20 de outubro, um problema técnico temporário impediu alguns Pioneers de iniciar sessão. O problema foi resolvido: se não conseguiu entrar, tente novamente.", "Se ainda tiver dificuldades ou não encontrar o seu progresso, contacte o suporte. Obrigado pela paciência!", "Contactar o suporte", "Fechar aviso"], "de": ["Arena ist wieder verfügbar ⚔️", "Am 20. Oktober konnten sich einige Pioneers wegen eines vorübergehenden technischen Problems nicht anmelden. Das Problem wurde behoben. Bitte versuchen Sie es erneut.", "Falls weiterhin Probleme auftreten oder Ihr Fortschritt fehlt, wenden Sie sich an den Support. Vielen Dank für Ihre Geduld!", "Support kontaktieren", "Hinweis schließen"], "id": ["Arena kembali tersedia ⚔️", "Pada 20 Oktober, masalah teknis sementara membuat beberapa Pioneer tidak dapat masuk. Masalah telah diselesaikan. Jika sebelumnya tidak dapat masuk, silakan coba lagi.", "Jika masih mengalami kesulitan atau progres tidak ditemukan, hubungi dukungan. Terima kasih atas kesabaran Anda!", "Hubungi dukungan", "Tutup pemberitahuan"], "zh": ["Arena 已恢复使用 ⚔️", "10月20日，临时技术故障导致部分先锋无法登录。问题现已解决。如果之前无法登录，请重试。", "如果仍有问题或找不到游戏进度，请联系支持团队。感谢您的耐心等待！", "联系支持", "关闭通知"]};
- const box=document.getElementById('service-notice'), select=document.getElementById('notice-language'), close=document.getElementById('notice-close');
- const read=k=>{try{return localStorage.getItem(k)}catch(e){return null}}, write=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
- const key='arena-service-restored-2026-10-20';
- if(Date.now()>=Date.parse('2026-10-28T00:00:00Z')||read(key)==='dismissed')return;
- function render(language){const lang=String(language||'en').toLowerCase().split(/[-_]/)[0], active=copy[lang]?lang:'en', t=copy[active];box.lang=active;select.value=active;document.getElementById('notice-title').textContent=t[0];document.getElementById('notice-body').textContent=t[1];document.getElementById('notice-help').textContent=t[2];document.getElementById('notice-support').textContent=t[3];close.setAttribute('aria-label',t[4]);}
- render(read('arena-notice-language')||(document.documentElement.lang!=='en'&&document.documentElement.lang)||(navigator.languages||[])[0]||navigator.language||'en');
- select.addEventListener('change',()=>{write('arena-notice-language',select.value);render(select.value)});
- window.addEventListener('languagechange',()=>render(read('arena-notice-language')||navigator.language));
- new MutationObserver(()=>render(document.documentElement.lang)).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
- close.addEventListener('click',()=>{box.hidden=true;write(key,'dismissed')});box.hidden=false;
-})();
-</script>
-      <section class="panel">
+<section class="panel">
         <div class="preferences"><label>Language <select id="app-language" aria-label="Language"><option value="en">English</option><option value="it">Italiano</option><option value="es">Español</option><option value="fr">Français</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="id">Bahasa Indonesia</option><option value="zh">中文</option></select></label></div>
         <div id="status" class="status" role="status" aria-live="polite">Sign in with Pi to play</div>
         <button id="reconnect" class="action secondary hidden">SIGN IN AGAIN</button>
@@ -692,7 +675,8 @@
         try{
           if(!window.Pi?.authenticate)throw Error("Pi unavailable");
           const a=await Pi.authenticate(["username","payments"],recover);if(!a?.accessToken)throw Error("Missing token");
-          accessToken=a.accessToken;const session=await api("/api/auth",{});if(!session.storeReady)throw Object.assign(new Error("Store unavailable"),{status:503});
+          accessToken=a.accessToken;
+          await recoverPendingPayments();const session=await api("/api/auth",{});if(!session.storeReady)throw Object.assign(new Error("Store unavailable"),{status:503});
           if(session.uid!==authenticatedUid){accessToken=null;arenaSession=null;throw Object.assign(new Error("Different account"),{differentAccount:true});}
           arenaSession=session.arenaSession||null;premium=!!session.premium;replayCredits=Number(session.replayCredits)||0;
           renderLoginReward(session.loginReward);
@@ -731,19 +715,18 @@
         lives = Math.max(0, Number(d.state.lives) || 0);
         return true;
       }
+      const pendingRecoveries=new Map();
+      let recoveryRunning=false;
       async function recover(p) {
-        if (p?.identifier)
-          try {
-            await api(
-              "/api/pi-payment",
-              {
-                action: "recover",
-                paymentId: p.identifier,
-                txid: p.transaction?.txid || "",
-              },
-              false,
-            );
-          } catch {}
+        if(!p?.identifier)return;
+        pendingRecoveries.set(p.identifier,{paymentId:p.identifier,txid:p.transaction?.txid||""});
+        if(accessToken&&!loginBusy)await recoverPendingPayments();
+      }
+      async function recoverPendingPayments(){
+        if(recoveryRunning||!accessToken)return;
+        recoveryRunning=true;
+        try{for(const [id,payment] of pendingRecoveries){await api("/api/pi-payment",{action:"recover",...payment});pendingRecoveries.delete(id);}}
+        finally{recoveryRunning=false;}
       }
       $("login").onclick = async () => {
         if(loginBusy)return;
@@ -754,6 +737,7 @@
           const a=await Pi.authenticate(["username","payments"],recover);
           if(!a?.accessToken)throw new Error("Missing token");
           accessToken=a.accessToken;
+          await recoverPendingPayments();
           const incoming=new URLSearchParams(location.search).get("source")||new URLSearchParams(location.search).get("ref");
           if(incoming)safeWrite("arena-source",incoming.toLowerCase());
           const session=await api("/api/auth",{source:safeRead("arena-source")||"direct"});

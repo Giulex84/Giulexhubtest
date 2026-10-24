@@ -75,7 +75,9 @@ async function handler(req, res) {
     if (!isStoreConfigured())
         return res.status(503).json({ error: "Persistent store is not configured" });
     try {
-        const user = sessionToken ? verifyArenaSession(sessionToken) : await verifyAccessToken(token), action = req.body?.action || "load";
+        let user;
+        try{user=sessionToken?verifyArenaSession(sessionToken):await verifyAccessToken(token);}catch{return res.status(401).json({error:"Invalid or expired Arena session"});}
+        const action=req.body?.action||"load";
         if (action === "load")
             return res.status(200).json({ state: await getGameState(user.uid) });
         if (action === "save")
@@ -131,6 +133,7 @@ async function handler(req, res) {
             }
         }
         if (action === "daily-reset") {
+            if(req.body?.day!==day||typeof req.body?.expectedAttemptId!=="string"||!req.body.expectedAttemptId||req.body.expectedAttemptId.length>128)return res.status(409).json({error:"Reload saved Daily before using a ticket"});
             if (req.body?.day && req.body.day !== day)
                 return res.status(409).json({ error: "Daily day changed. Reload saved progress." });
             const lockId = await acquireDailyLock(user.uid, day);
@@ -145,6 +148,7 @@ async function handler(req, res) {
             }
         }
         if (action === "daily-flip") {
+            if(req.body?.day!==day||req.body?.expectedMoves===undefined||typeof req.body?.expectedAttemptId!=="string"||!req.body.expectedAttemptId||req.body.expectedAttemptId.length>128)return res.status(409).json({error:"Reload saved Daily before continuing"});
             if (req.body?.day && req.body.day !== day)
                 return res.status(409).json({ error: "Daily day changed. Reload saved progress." });
             const index = Number(req.body?.index);

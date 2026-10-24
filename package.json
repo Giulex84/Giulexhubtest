@@ -4,7 +4,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node check-daily-recovery.cjs && node tests/check-admin.cjs && node tests/check-payments.cjs && node tests/check-redis.cjs && node tests/check-testnet.cjs && node tests/check-classic-badges.cjs && node tests/check-classic-levels.cjs && node tests/check-ux.cjs && node tests/check-rewards.cjs",
-    "check:build": "node check-build.cjs"
+    "test": "node check-daily-recovery.cjs && node tests/check-admin.cjs && node tests/check-payments.cjs && node tests/check-redis.cjs && node tests/check-testnet.cjs && node tests/check-classic-badges.cjs && node tests/check-classic-levels.cjs && node tests/check-ux.cjs && node tests/check-rewards.cjs && node tests/check-release-security.cjs",
+    "check:build": "node check-build.cjs",
+    "test:ui": "node tests/check-ui-flows.cjs"
   }
 }
