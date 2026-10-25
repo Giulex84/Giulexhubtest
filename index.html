@@ -208,6 +208,8 @@
         font-size: 1.55rem;
         box-shadow: inset 0 1px #ffffff12;
       }
+      body[data-card-style="ocean"] .card:not(.flipped):not(.matched){background:repeating-linear-gradient(135deg,#123f68 0 8px,#146b80 8px 16px);border-color:#55cddd;}
+      body[data-card-style="aurora"] .card:not(.flipped):not(.matched){background:repeating-linear-gradient(45deg,#452569 0 8px,#26675e 8px 16px);border-color:#c4a1ff;}
       .card.flipped,
       .card.matched {
         background: linear-gradient(145deg, #745fff, #3c9cac);
@@ -440,7 +442,7 @@
             </div>
             <button id="openDaily" class="action">PLAY NOW</button>
           </div>
-          <div class="daily-result"><strong id="loginRewardProgress"></strong><br><span id="loginRewardTotal"></span></div>
+          <div class="daily-result" hidden><strong id="loginRewardProgress"></strong><br><span id="loginRewardTotal"></span></div>
           <details id="how-to-play" class="help-guide"><summary>How to play</summary><p>Classic: match pairs, build combos and keep your lives.</p><p>Daily: 6 pairs, 18 moves, one free challenge a day.</p><p>PvP: complete the same board in fewer moves than your opponent.</p></details>
           <nav class="tabs" aria-label="Game modes" role="tablist">
             <button id="classicTab" role="tab" aria-controls="classic" aria-selected="true" class="tab active">Classic</button
@@ -521,7 +523,7 @@
               </ol>
             </div>
           </section>
-          <section class="leaderboard" id="dailyWeeklyPanel" hidden><h3>WEEKLY DAILY · TEST SIMULATION</h3><p class="muted">Demonstration pool: 3 Test-Pi · 1.5 / 1 / 0.5. No Pi payments are made.</p><details><summary>Ranking rules</summary><p>Only the first free Daily counts. More days completed wins, then fewer total moves, then higher total score. Further ties: earliest final completion, then account ID. Monday to Sunday UTC. Replay attempts do not count.</p></details><p id="weeklyPosition"></p><ol id="weeklyDailyLeaders"></ol><div id="weeklyDailyHistory"></div></section>
+          <section class="leaderboard" id="dailyWeeklyPanel" hidden><h3>WEEKLY DAILY</h3><p class="muted">A fresh challenge every week. Complete free Daily challenges to unlock card styles. Cosmetic recognition only; no Pi prizes.</p><details><summary>Ranking rules</summary><p>Only the first free Daily counts. More days completed wins, then fewer total moves, then higher total score. Further ties: earliest final completion, then account ID. Monday to Sunday UTC. Replay attempts do not count.</p></details><p id="weeklyJourney"></p><progress id="weeklyProgress" max="7" value="0" aria-label="Weekly progress"></progress><p>3 days: Ocean · 5 days: Aurora. Missing a day does not erase your weekly progress.</p><label for="cardStyle">Card style</label> <select id="cardStyle"><option value="default">Original</option></select><p id="weeklyPosition"></p><ol id="weeklyDailyLeaders"></ol><div id="weeklyDailyHistory"></div></section>
           <section id="pvp" role="tabpanel" aria-labelledby="pvpTab" class="hidden">
             <div class="daily-head">
               <h2>Async PvP</h2>
@@ -932,11 +934,7 @@
         ); } catch(error) { paymentBusy=false;$("premium").disabled=false;setStatus(userError(error)); }
       }
       $("premium").onclick=()=>confirmPurchase("premium",startPremiumPayment);
-      function renderLoginReward(reward){
-        const count=Number(reward?.count)||0,total=Number(reward?.ticketsEarned)||0;
-        $("loginRewardProgress").textContent=`Next free Replay Ticket: ${count%7}/7 consecutive login days`;
-        $("loginRewardTotal").textContent=`Replay Tickets earned: ${total}`;
-      }
+      function renderLoginReward(){ document.body.dataset.cardStyle="default"; }
       function showTab(name) {
         $("dailyWeeklyPanel").hidden=name!=="daily";
         for (const tab of ["classic", "daily", "pvp"]) {
@@ -1179,9 +1177,17 @@
       async function loadWeeklyDaily(){
         try{
           const data=await api("/api/game-state",{action:"daily-weekly"});
+          $("weeklyJourney").textContent=`${data.completedDays||0}/7 Daily completed this week`;
+          $("weeklyProgress").value=data.completedDays||0;
+          const styles=["default",...(data.cosmetics||[]).filter(x=>["ocean","aurora"].includes(x))];
+          $("cardStyle").innerHTML=styles.map(x=>`<option value="${x}">${({default:"Original",ocean:"Ocean",aurora:"Aurora"})[x]}</option>`).join("");
+          let chosen="default";try{chosen=localStorage.getItem("arena-card-style:"+authenticatedUid)||"default"}catch{}
+          if(!styles.includes(chosen))chosen="default";
+          document.body.dataset.cardStyle=chosen;$("cardStyle").value=chosen;
+          $("cardStyle").onchange=()=>{document.body.dataset.cardStyle=$("cardStyle").value;try{localStorage.setItem("arena-card-style:"+authenticatedUid,$("cardStyle").value)}catch{}};
           $("weeklyPosition").textContent=data.position?`Your rank #${data.position}`:"Complete your first free Daily to enter this week’s ranking.";
-          $("weeklyDailyLeaders").innerHTML=(data.leaders||[]).map(row=>`<li><b>@${escapeHtml(row.username)}</b><small>${row.days} days · ${row.moves} moves · ${row.score} pts</small>${row.simulatedTestPi?`<small>${row.simulatedTestPi} Test-Pi · simulation</small>`:""}</li>`).join("");
-          $("weeklyDailyHistory").innerHTML=data.lastWeek?`<h4>Previous week · simulation</h4>`+data.lastWeek.winners.map(row=>`<p>${row.rank}. @${escapeHtml(row.username)} · ${row.simulatedTestPi} Test-Pi</p>`).join(""):"";
+          $("weeklyDailyLeaders").innerHTML=(data.leaders||[]).map(row=>`<li><b>@${escapeHtml(row.username)}</b><small>${row.days} days · ${row.moves} moves · ${row.score} pts</small>${row.previousWeekMedal?`<small>${["","🥇","🥈","🥉"][row.previousWeekMedal]}</small>`:""}</li>`).join("");
+          $("weeklyDailyHistory").innerHTML=data.lastWeek?`<h4>Previous week</h4>`+data.lastWeek.winners.map(row=>`<p>${row.rank}. @${escapeHtml(row.username)} · ${["","🥇","🥈","🥉"][row.medal]||""}</p>`).join(""):"";
         }catch{ $("weeklyPosition").textContent="Weekly ranking unavailable. Try reopening Daily."; }
       }
       function escapeHtml(value) {
