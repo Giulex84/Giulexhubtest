@@ -523,7 +523,7 @@
               </ol>
             </div>
           </section>
-          <section class="leaderboard" id="dailyWeeklyPanel" hidden><h3>WEEKLY DAILY</h3><p class="muted">A fresh challenge every week. Complete free Daily challenges to unlock card styles. Cosmetic recognition only; no Pi prizes.</p><details><summary>Ranking rules</summary><p>Only the first free Daily counts. More days completed wins, then fewer total moves, then higher total score. Further ties: earliest final completion, then account ID. Monday to Sunday UTC. Replay attempts do not count.</p></details><p id="weeklyJourney"></p><progress id="weeklyProgress" max="7" value="0" aria-label="Weekly progress"></progress><p>3 days: Ocean · 5 days: Aurora. Missing a day does not erase your weekly progress.</p><label for="cardStyle">Card style</label> <select id="cardStyle"><option value="default">Original</option></select><p id="weeklyPosition"></p><ol id="weeklyDailyLeaders"></ol><div id="weeklyDailyHistory"></div></section>
+          <section class="leaderboard" id="dailyWeeklyPanel" hidden><h3>WEEKLY DAILY</h3><p class="muted">A fresh challenge every week. Complete free Daily challenges to unlock card styles. Cosmetic recognition only; no Pi prizes.</p><details><summary>Ranking rules</summary><p>Only the first free Daily counts. More days completed wins, then fewer total moves, then higher total score. Further ties: earliest final completion, then account ID. Monday to Sunday UTC. Replay attempts do not count.</p></details><p id="weeklyJourney"></p><p id="weeklyNextUnlock" aria-live="polite"></p><p class="muted">New week: Monday 00:00 UTC. Unlocked card styles are yours to keep.</p><progress id="weeklyProgress" max="7" value="0" aria-label="Weekly progress"></progress><p>3 days: Ocean · 5 days: Aurora. Missing a day does not erase your weekly progress.</p><label for="cardStyle">Card style</label> <select id="cardStyle"><option value="default">Original</option></select><p id="weeklyPosition" aria-live="polite"></p><button id="retryWeeklyDaily" type="button" hidden>Retry weekly ranking</button><ol id="weeklyDailyLeaders"></ol><div id="weeklyDailyHistory"></div></section>
           <section id="pvp" role="tabpanel" aria-labelledby="pvpTab" class="hidden">
             <div class="daily-head">
               <h2>Async PvP</h2>
@@ -1174,11 +1174,25 @@
           console.warn("Leaderboard", e.message);
         }
       }
+      function weeklyUnlockMessage(completedDays, cosmetics){
+        const days=Math.max(0,Math.min(7,Number(completedDays)||0));
+        const owned=new Set(cosmetics||[]);
+        if(!owned.has("ocean") && days<3) return `Ocean: ${3-days} more free Daily completions`;
+        if(!owned.has("aurora") && days<5) return `Aurora: ${5-days} more free Daily completions`;
+        return "Weekly milestones reached. Your card styles stay unlocked.";
+      }
+      let weeklyDailyLoading=false;
+      $("retryWeeklyDaily").onclick=()=>loadWeeklyDaily();
       async function loadWeeklyDaily(){
+        if(weeklyDailyLoading)return;
+        weeklyDailyLoading=true;
+        $("retryWeeklyDaily").disabled=true;
         try{
           const data=await api("/api/game-state",{action:"daily-weekly"});
           $("weeklyJourney").textContent=`${data.completedDays||0}/7 Daily completed this week`;
           $("weeklyProgress").value=data.completedDays||0;
+          $("weeklyNextUnlock").textContent=weeklyUnlockMessage(data.completedDays,data.cosmetics);
+          $("retryWeeklyDaily").hidden=true;
           const styles=["default",...(data.cosmetics||[]).filter(x=>["ocean","aurora"].includes(x))];
           $("cardStyle").innerHTML=styles.map(x=>`<option value="${x}">${({default:"Original",ocean:"Ocean",aurora:"Aurora"})[x]}</option>`).join("");
           let chosen="default";try{chosen=localStorage.getItem("arena-card-style:"+authenticatedUid)||"default"}catch{}
@@ -1188,7 +1202,8 @@
           $("weeklyPosition").textContent=data.position?`Your rank #${data.position}`:"Complete your first free Daily to enter this week’s ranking.";
           $("weeklyDailyLeaders").innerHTML=(data.leaders||[]).map(row=>`<li><b>@${escapeHtml(row.username)}</b><small>${row.days} days · ${row.moves} moves · ${row.score} pts</small>${row.previousWeekMedal?`<small>${["","🥇","🥈","🥉"][row.previousWeekMedal]}</small>`:""}</li>`).join("");
           $("weeklyDailyHistory").innerHTML=data.lastWeek?`<h4>Previous week</h4>`+data.lastWeek.winners.map(row=>`<p>${row.rank}. @${escapeHtml(row.username)} · ${["","🥇","🥈","🥉"][row.medal]||""}</p>`).join(""):"";
-        }catch{ $("weeklyPosition").textContent="Weekly ranking unavailable. Try reopening Daily."; }
+        }catch{ $("weeklyPosition").textContent="Weekly ranking unavailable. Retry when connected."; $("weeklyNextUnlock").textContent=""; $("retryWeeklyDaily").hidden=false; }
+        finally{weeklyDailyLoading=false;$("retryWeeklyDaily").disabled=false;}
       }
       function escapeHtml(value) {
         return String(value).replace(
