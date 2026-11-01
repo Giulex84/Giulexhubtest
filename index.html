@@ -1017,6 +1017,14 @@
         } else setStatus("Could not verify saved progress. Tap RESTORE SAVED DAILY before continuing.");
       }
       $("syncDaily").onclick = () => { if (!dailyBusy && !dailyLoading) loadDaily(); };
+      function visibleDailyStreak(streak, today = new Date().toISOString().slice(0,10)) {
+        const count = Math.max(0, Math.floor(Number(streak?.count) || 0));
+        if (!Number.isFinite(count)) return 0;
+        const yesterday = new Date(`${today}T00:00:00.000Z`);
+        yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+        return streak?.lastDay === today || streak?.lastDay === yesterday.toISOString().slice(0,10)
+          ? count : 0;
+      }
       function renderDaily() {
         $("syncDaily").classList.toggle("hidden", !dailyNeedsSync);
         $("syncDaily").disabled = dailyBusy || dailyLoading;
@@ -1026,7 +1034,7 @@
         $("dailyBest").textContent = dailyMeta.best
           ? `${dailyMeta.best.moves} moves · ${dailyMeta.best.score} pts`
           : "—";
-        const streakCount = Number(dailyMeta.streak?.count) || 0;
+        const streakCount = visibleDailyStreak(dailyMeta.streak);
         $("dailyStreak").textContent = `${streakCount} ${streakCount === 1 ? "day" : "days"}`;
         updateDailySpotlight(streakCount);
         if (!dailyState) {
@@ -1487,5 +1495,6 @@
     </script>
   </body>
 </html>
+
 
 
