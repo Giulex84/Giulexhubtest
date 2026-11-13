@@ -1,5 +1,12 @@
 # Arena Test — Pi Testnet
 
+## App documentation · 14 November 2026
+
+[Privacy Policy](privacy.html) · [Terms of Service](terms.html)
+
+Privacy covers the public Testnet rankings and the disabled analytics collection. The terms distinguish the free Daily challenge from paid Test-Pi replays.
+
+
 Arena Test is the Testnet development build for Arena. It uses `Pi.init({ version: "2.0", sandbox: true })` and Test-Pi only.
 
 ## Current release
