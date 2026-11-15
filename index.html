@@ -214,6 +214,18 @@
         background: linear-gradient(145deg, #303440, #111319);
         border-color: #d5b56b;
       }
+      body[data-card-style="storm"] .card:not(.flipped):not(.matched) {
+        background: repeating-linear-gradient(155deg, #20324d 0 12px, #35465f 13px 14px, #20324d 15px 24px);
+        border-color: #8acbff;
+      }
+      body[data-card-style="jade"] .card:not(.flipped):not(.matched) {
+        background: repeating-linear-gradient(35deg, #124a40 0 11px, #2f7863 12px 14px, #124a40 15px 26px);
+        border-color: #a4efcb;
+      }
+      body[data-card-style="supernova"] .card:not(.flipped):not(.matched) {
+        background: radial-gradient(ellipse at center, #6d3b8e 0%, #33235d 42%, #e0a758 48%, #322354 54%, #15162f 72%);
+        border-color: #f0c779;
+      }
       .card.flipped,
       .card.matched {
         background: linear-gradient(145deg, #745fff, #3c9cac);
@@ -529,7 +541,7 @@
               </ol>
             </div>
           </section>
-          <section class="leaderboard" id="dailyWeeklyPanel" hidden><h3>WEEKLY DAILY</h3><p class="muted">A fresh challenge every week. Complete free Daily challenges to unlock card styles. Cosmetic recognition only; no Pi prizes.</p><details><summary>Ranking rules</summary><p>Only the first free Daily counts. More days completed wins, then fewer total moves, then higher total score. Further ties: earliest final completion, then account ID. Monday to Sunday UTC. Replay attempts do not count.</p></details><p id="weeklyJourney"></p><p id="weeklyNextUnlock" aria-live="polite"></p><p class="muted">New week: Monday 00:00 UTC. Unlocked card styles are yours to keep.</p><progress id="weeklyProgress" max="7" value="0" aria-label="Weekly progress"></progress><p>3 days: Ocean · 5 days: Aurora · 6 days: Obsidian. Missing a day does not erase your weekly progress.</p><label for="cardStyle">Card style</label> <select id="cardStyle"><option value="default">Original</option></select><p id="weeklyPosition" aria-live="polite"></p><button id="retryWeeklyDaily" type="button" hidden>Retry weekly ranking</button><ol id="weeklyDailyLeaders"></ol><div id="weeklyDailyHistory"></div></section>
+          <section class="leaderboard" id="dailyWeeklyPanel" hidden><h3>WEEKLY DAILY</h3><p class="muted">A fresh challenge every week. Complete free Daily challenges to unlock card styles. Cosmetic recognition only; no Pi prizes.</p><details><summary>Ranking rules</summary><p>Only the first free Daily counts. More days completed wins, then fewer total moves, then higher total score. Further ties: earliest final completion, then account ID. Monday to Sunday UTC. Replay attempts do not count.</p></details><p id="weeklyJourney"></p><p id="weeklyNextUnlock" aria-live="polite"></p><p class="muted">New week: Monday 00:00 UTC. Unlocked card styles are yours to keep.</p><progress id="weeklyProgress" max="7" value="0" aria-label="Weekly progress"></progress><p><span>2 · <span>Ocean</span></span> · <span>3 · <span>Aurora</span></span> · <span>4 · <span>Obsidian</span></span> · <span>5 · <span>Storm</span></span> · <span>6 · <span>Jade</span></span> · <span>7 · <span>Supernova</span></span></p><p>Skipping a day doesn’t erase your weekly progress.</p><label for="cardStyle">Card style</label> <select id="cardStyle"><option value="default">Original</option></select><p id="weeklyPosition" aria-live="polite"></p><button id="retryWeeklyDaily" type="button" hidden>Retry weekly ranking</button><ol id="weeklyDailyLeaders"></ol><div id="weeklyDailyHistory"></div></section>
           <section id="pvp" role="tabpanel" aria-labelledby="pvpTab" class="hidden">
             <div class="daily-head">
               <h2>Async PvP</h2>
@@ -1190,13 +1202,20 @@
           console.warn("Leaderboard", e.message);
         }
       }
-      function weeklyUnlockMessage(completedDays, cosmetics, compact = false){
-        const days=Math.max(0,Math.min(7,Number(completedDays)||0));
-        const owned=new Set(cosmetics||[]);
-        if(!owned.has("ocean") && days<3) return compact ? `Ocean · ${3-days} Daily to go` : `Ocean: ${3-days} more free Daily completions`;
-        if(!owned.has("aurora") && days<5) return compact ? `Aurora · ${5-days} Daily to go` : `Aurora: ${5-days} more free Daily completions`;
-        if(!owned.has("obsidian") && days<6) return compact ? `Obsidian · ${6-days} Daily to go` : `Obsidian: ${6-days} more free Daily completions`;
-        return "";
+      const dailyStyleMilestones = [["ocean",2,"Ocean"],
+        ["aurora",3,"Aurora"],
+        ["obsidian",4,"Obsidian"],
+        ["storm",5,"Storm"],
+        ["jade",6,"Jade"],
+        ["supernova",7,"Supernova"]];
+      function weeklyUnlockMessage(completedDays, cosmetics, compact = false) {
+        const days = Math.max(0, Math.min(7, Number(completedDays) || 0));
+        const owned = new Set(cosmetics || []);
+        const next = dailyStyleMilestones.find(([style, threshold]) => !owned.has(style) && days < threshold);
+        if (!next) return "";
+        const [, threshold, name] = next;
+        const remaining = threshold - days;
+        return compact ? `${name} · ${remaining} free Daily to go` : `Unlock ${name}: complete ${remaining} more free Daily challenges`;
       }
       function renderDailyResultUnlock() {
         const result = $("dailyResultUnlock");
@@ -1226,8 +1245,12 @@
           $("weeklyNextUnlock").textContent = nextUnlock || "Weekly milestones reached. Your card styles stay unlocked.";
           showDailyUnlock(weeklyUnlockMessage(data.completedDays, data.cosmetics, true));
           $("retryWeeklyDaily").hidden=true;
-          const styles=["default",...(data.cosmetics||[]).filter(x=>["ocean","aurora","obsidian"].includes(x))];
-          $("cardStyle").innerHTML=styles.map(x=>`<option value="${x}">${({default:"Original",ocean:"Ocean",aurora:"Aurora",obsidian:"Obsidian"})[x]}</option>`).join("");
+          const owned = new Set(data.cosmetics || []);
+          const options = [["default", "Original"], ...dailyStyleMilestones
+            .filter(([style]) => owned.has(style))
+            .map(([style, , name]) => [style, name])];
+          const styles = options.map(([style]) => style);
+          $("cardStyle").innerHTML = options.map(([style, name]) => `<option value="${style}">${name}</option>`).join("");
           let chosen="default";try{chosen=localStorage.getItem("arena-card-style:"+authenticatedUid)||"default"}catch{}
           if(!styles.includes(chosen))chosen="default";
           document.body.dataset.cardStyle=chosen;$("cardStyle").value=chosen;
