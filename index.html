@@ -498,6 +498,7 @@
             <button id="syncDaily" class="action secondary hidden">RESTORE SAVED DAILY</button>
             <button id="startDaily" class="action">START DAILY ARENA</button>
             <div id="dailyFeedback" role="status" aria-live="polite"></div><div id="dailyResult" class="daily-result hidden"></div>
+            <p id="dailyResultUnlock" class="muted hidden" aria-live="polite"></p>
             <div class="daily-meta">
               <span>TODAY ATTEMPTS<b id="dailyAttempts">0</b></span
               ><span>PERSONAL BEST<b id="dailyBest">—</b></span
@@ -1026,6 +1027,7 @@
         return streak?.lastDay === today || streak?.lastDay === yesterday.toISOString().slice(0,10)
           ? count : 0;
       }
+      let dailyUnlockMessage = "";
       function renderDaily() {
         $("syncDaily").classList.toggle("hidden", !dailyNeedsSync);
         $("syncDaily").disabled = dailyBusy || dailyLoading;
@@ -1038,6 +1040,7 @@
         const streakCount = visibleDailyStreak(dailyMeta.streak);
         $("dailyStreak").textContent = `${streakCount} ${streakCount === 1 ? "day" : "days"}`;
         updateDailySpotlight(streakCount);
+        renderDailyResultUnlock();
         if (!dailyState) {
           $("startDaily").classList.remove("hidden");
           $("startDaily").disabled = dailyBusy || dailyLoading || dailyNeedsSync;
@@ -1183,12 +1186,26 @@
           console.warn("Leaderboard", e.message);
         }
       }
-      function weeklyUnlockMessage(completedDays, cosmetics){
+      function weeklyUnlockMessage(completedDays, cosmetics, compact = false){
         const days=Math.max(0,Math.min(7,Number(completedDays)||0));
         const owned=new Set(cosmetics||[]);
-        if(!owned.has("ocean") && days<3) return `Ocean: ${3-days} more free Daily completions`;
-        if(!owned.has("aurora") && days<5) return `Aurora: ${5-days} more free Daily completions`;
+        if(!owned.has("ocean") && days<3) return compact ? `Ocean · ${3-days} Daily to go` : `Ocean: ${3-days} more free Daily completions`;
+        if(!owned.has("aurora") && days<5) return compact ? `Aurora · ${5-days} Daily to go` : `Aurora: ${5-days} more free Daily completions`;
         return "";
+      }
+      function renderDailyResultUnlock() {
+        const result = $("dailyResultUnlock");
+        const message = dailyUnlockMessage;
+        const visible = dailyState?.status === "completed" && Boolean(message);
+        result.textContent = visible ? message : "";
+        result.classList.toggle("hidden", !visible);
+      }
+      function showDailyUnlock(message = "") {
+        dailyUnlockMessage = message;
+        const spotlight = $("dailySpotlightUnlock");
+        spotlight.textContent = message;
+        spotlight.classList.toggle("hidden", !message);
+        renderDailyResultUnlock();
       }
       let weeklyDailyLoading=false;
       $("retryWeeklyDaily").onclick=()=>loadWeeklyDaily();
@@ -1202,8 +1219,7 @@
           $("weeklyProgress").value=data.completedDays||0;
           const nextUnlock = weeklyUnlockMessage(data.completedDays, data.cosmetics);
           $("weeklyNextUnlock").textContent = nextUnlock || "Weekly milestones reached. Your card styles stay unlocked.";
-          $("dailySpotlightUnlock").textContent = nextUnlock;
-          $("dailySpotlightUnlock").classList.toggle("hidden", !nextUnlock);
+          showDailyUnlock(weeklyUnlockMessage(data.completedDays, data.cosmetics, true));
           $("retryWeeklyDaily").hidden=true;
           const styles=["default",...(data.cosmetics||[]).filter(x=>["ocean","aurora"].includes(x))];
           $("cardStyle").innerHTML=styles.map(x=>`<option value="${x}">${({default:"Original",ocean:"Ocean",aurora:"Aurora"})[x]}</option>`).join("");
@@ -1214,7 +1230,7 @@
           $("weeklyPosition").textContent=data.position?`Your rank #${data.position}`:"Complete your first free Daily to enter this week’s ranking.";
           $("weeklyDailyLeaders").innerHTML=(data.leaders||[]).map(row=>`<li><b>@${escapeHtml(row.username)}</b><small>${row.days} days · ${row.moves} moves · ${row.score} pts</small>${row.previousWeekMedal?`<small>${["","🥇","🥈","🥉"][row.previousWeekMedal]}</small>`:""}</li>`).join("");
           $("weeklyDailyHistory").innerHTML=data.lastWeek?`<h4>Previous week</h4>`+data.lastWeek.winners.map(row=>`<p>${row.rank}. @${escapeHtml(row.username)} · ${["","🥇","🥈","🥉"][row.medal]||""}</p>`).join(""):"";
-        }catch{ $("weeklyPosition").textContent="Weekly ranking unavailable. Retry when connected."; $("weeklyNextUnlock").textContent=""; $("dailySpotlightUnlock").textContent=""; $("dailySpotlightUnlock").classList.add("hidden"); $("retryWeeklyDaily").hidden=false; }
+        }catch{ $("weeklyPosition").textContent="Weekly ranking unavailable. Retry when connected."; $("weeklyNextUnlock").textContent=""; showDailyUnlock(); $("retryWeeklyDaily").hidden=false; }
         finally{weeklyDailyLoading=false;$("retryWeeklyDaily").disabled=false;}
       }
       function escapeHtml(value) {
