@@ -210,6 +210,10 @@
       }
       body[data-card-style="ocean"] .card:not(.flipped):not(.matched){background:repeating-linear-gradient(135deg,#123f68 0 8px,#146b80 8px 16px);border-color:#55cddd;}
       body[data-card-style="aurora"] .card:not(.flipped):not(.matched){background:repeating-linear-gradient(45deg,#452569 0 8px,#26675e 8px 16px);border-color:#c4a1ff;}
+      body[data-card-style="obsidian"] .card:not(.flipped):not(.matched) {
+        background: linear-gradient(145deg, #303440, #111319);
+        border-color: #d5b56b;
+      }
       .card.flipped,
       .card.matched {
         background: linear-gradient(145deg, #745fff, #3c9cac);
@@ -525,7 +529,7 @@
               </ol>
             </div>
           </section>
-          <section class="leaderboard" id="dailyWeeklyPanel" hidden><h3>WEEKLY DAILY</h3><p class="muted">A fresh challenge every week. Complete free Daily challenges to unlock card styles. Cosmetic recognition only; no Pi prizes.</p><details><summary>Ranking rules</summary><p>Only the first free Daily counts. More days completed wins, then fewer total moves, then higher total score. Further ties: earliest final completion, then account ID. Monday to Sunday UTC. Replay attempts do not count.</p></details><p id="weeklyJourney"></p><p id="weeklyNextUnlock" aria-live="polite"></p><p class="muted">New week: Monday 00:00 UTC. Unlocked card styles are yours to keep.</p><progress id="weeklyProgress" max="7" value="0" aria-label="Weekly progress"></progress><p>3 days: Ocean · 5 days: Aurora. Missing a day does not erase your weekly progress.</p><label for="cardStyle">Card style</label> <select id="cardStyle"><option value="default">Original</option></select><p id="weeklyPosition" aria-live="polite"></p><button id="retryWeeklyDaily" type="button" hidden>Retry weekly ranking</button><ol id="weeklyDailyLeaders"></ol><div id="weeklyDailyHistory"></div></section>
+          <section class="leaderboard" id="dailyWeeklyPanel" hidden><h3>WEEKLY DAILY</h3><p class="muted">A fresh challenge every week. Complete free Daily challenges to unlock card styles. Cosmetic recognition only; no Pi prizes.</p><details><summary>Ranking rules</summary><p>Only the first free Daily counts. More days completed wins, then fewer total moves, then higher total score. Further ties: earliest final completion, then account ID. Monday to Sunday UTC. Replay attempts do not count.</p></details><p id="weeklyJourney"></p><p id="weeklyNextUnlock" aria-live="polite"></p><p class="muted">New week: Monday 00:00 UTC. Unlocked card styles are yours to keep.</p><progress id="weeklyProgress" max="7" value="0" aria-label="Weekly progress"></progress><p>3 days: Ocean · 5 days: Aurora · 6 days: Obsidian. Missing a day does not erase your weekly progress.</p><label for="cardStyle">Card style</label> <select id="cardStyle"><option value="default">Original</option></select><p id="weeklyPosition" aria-live="polite"></p><button id="retryWeeklyDaily" type="button" hidden>Retry weekly ranking</button><ol id="weeklyDailyLeaders"></ol><div id="weeklyDailyHistory"></div></section>
           <section id="pvp" role="tabpanel" aria-labelledby="pvpTab" class="hidden">
             <div class="daily-head">
               <h2>Async PvP</h2>
@@ -1191,6 +1195,7 @@
         const owned=new Set(cosmetics||[]);
         if(!owned.has("ocean") && days<3) return compact ? `Ocean · ${3-days} Daily to go` : `Ocean: ${3-days} more free Daily completions`;
         if(!owned.has("aurora") && days<5) return compact ? `Aurora · ${5-days} Daily to go` : `Aurora: ${5-days} more free Daily completions`;
+        if(!owned.has("obsidian") && days<6) return compact ? `Obsidian · ${6-days} Daily to go` : `Obsidian: ${6-days} more free Daily completions`;
         return "";
       }
       function renderDailyResultUnlock() {
@@ -1221,8 +1226,8 @@
           $("weeklyNextUnlock").textContent = nextUnlock || "Weekly milestones reached. Your card styles stay unlocked.";
           showDailyUnlock(weeklyUnlockMessage(data.completedDays, data.cosmetics, true));
           $("retryWeeklyDaily").hidden=true;
-          const styles=["default",...(data.cosmetics||[]).filter(x=>["ocean","aurora"].includes(x))];
-          $("cardStyle").innerHTML=styles.map(x=>`<option value="${x}">${({default:"Original",ocean:"Ocean",aurora:"Aurora"})[x]}</option>`).join("");
+          const styles=["default",...(data.cosmetics||[]).filter(x=>["ocean","aurora","obsidian"].includes(x))];
+          $("cardStyle").innerHTML=styles.map(x=>`<option value="${x}">${({default:"Original",ocean:"Ocean",aurora:"Aurora",obsidian:"Obsidian"})[x]}</option>`).join("");
           let chosen="default";try{chosen=localStorage.getItem("arena-card-style:"+authenticatedUid)||"default"}catch{}
           if(!styles.includes(chosen))chosen="default";
           document.body.dataset.cardStyle=chosen;$("cardStyle").value=chosen;
